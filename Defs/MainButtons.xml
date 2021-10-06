@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+	<MainButtonDef>
+		<defName>CraftingTab</defName>
+		<label>Crafting</label>
+		<description>Tab For Crafting.</description>
+		<tabWindowClass>BlockdudesTabs.CraftingTab</tabWindowClass>
+		<!-- <tabWindowClass>DubsMintMenus.MainTabWindow_MintBillMenu</tabWindowClass> -->
+		<!-- <workerClass>DubsMintMenus.MainButtonWorker_MintBillMenu</workerClass> -->
+		<buttonVisible>true</buttonVisible>
+		<defaultHotKey>None</defaultHotKey>
+		<order>5</order>
+		<minimized>false</minimized>
+		<validWithoutMap>false</validWithoutMap>
+	</MainButtonDef>
+</Defs>
