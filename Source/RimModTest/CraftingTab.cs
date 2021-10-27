@@ -26,6 +26,7 @@ namespace BlockdudesTabs
         public static List<ThingDef> SelectedCategoryList = null;
         public static ThingDef SelectedThingDef = null;
 
+        // keeps track of where the user scrolled or how much
         internal static Vector2 _scrollPositionCateg = Vector2.zero;
         internal static Vector2 _scrollPositionThing = Vector2.zero;
 
