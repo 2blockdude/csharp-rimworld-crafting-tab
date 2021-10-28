@@ -20,15 +20,19 @@ namespace BlockdudesTabs
         public override MainTabWindowAnchor Anchor => MainTabWindowAnchor.Left;
         protected override float Margin => 5f;
 
-        // Thing Lists
-        public static List<RecipeDef> RecipeList = DefDatabase<RecipeDef>.AllDefsListForReading;
-        public static List<ThingCategoryDef> CategoryList = DefDatabase<ThingCategoryDef>.AllDefsListForReading;
-        public static List<ThingDef> SelectedCategoryList = null;
-        public static ThingDef SelectedThingDef = null;
+        // keeps track of scroll
+        internal static Vector2 _scrollPositionCategoryTab = Vector2.zero;
+        internal static Vector2 _scrollPositionThingTab = Vector2.zero;
+        internal static Vector2 _scrollPositionModTab = Vector2.zero;
 
-        // keeps track of where the user scrolled or how much
-        internal static Vector2 _scrollPositionCateg = Vector2.zero;
-        internal static Vector2 _scrollPositionThing = Vector2.zero;
+        // Thing Lists
+        public static List<ModMetaData> ModsList = ModLister.AllInstalledMods.Where(mods => mods.Active).ToList();
+        public static List<RecipeDef> RecipesList = DefDatabase<RecipeDef>.AllDefsListForReading;
+        public static List<RecipeDef> CraftablesList = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).Where(def => !CraftablesList.Contains(def)).ToList();
+        public static List<RecipeDef> CraftablesFilteredList = null;
+        //public static List<ThingDef> Craftables = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).Select(def => def.ProducedThingDef).ToList();
+        public ThingDef SelectedThingDef = null;
+        public ModMetaData SelectedMod = null;
 
         public CraftingTab()
         {
@@ -39,108 +43,266 @@ namespace BlockdudesTabs
 
         public override void DoWindowContents(Rect inRect)
         {
+            Vector2 TabSize = new Vector2(RequestedTabSize.x - Margin * 2f, RequestedTabSize.y - Margin * 2f);
+            DrawScrollTab(DrawModButtons, ModsList, ref _scrollPositionModTab, TabSize.x / 2f * 0f, TabSize.y / 2f * 0f, TabSize.x / 2f, TabSize.y / 2f);
+            //DrawModsTab(ModsList);
             DrawCategoryTab();
-            DrawItemsTab();
+            DrawScrollTab(DrawThingButtons, CraftablesList, ref _scrollPositionThingTab, TabSize.x / 2f * 1f, TabSize.y / 2f * 0f, TabSize.x / 2f, TabSize.y / 3f * 2);
             DrawItemDescription();
         }
 
-        private void DrawModsTab()
+        private void DrawScrollTab<T>(Func<List<T>, Rect, bool> DrawButtons, List<T> list, ref Vector2 ScrollPosition, float PositionX, float PositionY, float SizeX, float SizeY)
         {
+            // constants
+            float ButtonHeight = 30f;
+            float OutMargin = 5f;
 
+            Vector2 OutRectPos = new Vector2(PositionX + OutMargin, PositionY + OutMargin);
+            Vector2 OutRectSize = new Vector2(SizeX - OutMargin * 2f, SizeY - OutMargin * 2f);
+
+            Vector2 ViewRectSize = new Vector2(OutRectSize.x - 18f, list.Count * ButtonHeight);
+
+            // scroll rects
+            Rect RectMargin = new Rect(PositionX, PositionY, SizeX, SizeY);
+            Rect RectOut = new Rect(OutRectPos, OutRectSize);
+            Rect RectView = new Rect(Vector2.zero, ViewRectSize);
+
+            // draw and decorate tab
+            Widgets.DrawBox(RectMargin);
+            Widgets.DrawHighlight(RectMargin);
+
+            // begin scroll
+            Widgets.BeginScrollView(RectOut, ref ScrollPosition, RectView);
+
+            DrawButtons(list, RectView);
+
+            Widgets.EndScrollView();
+        }
+
+        private void DrawScrollTab<T>(Func<List<T>, Rect, bool> DrawButtons, List<T> list, ref Vector2 ScrollPosition, Vector2 Position, Vector2 Size)
+        {
+            // constants
+            float ButtonHeight = 30f;
+            float OutMargin = 5f;
+
+            Vector2 OutRectPos = new Vector2(Position.x + OutMargin, Position.y + OutMargin);
+            Vector2 OutRectSize = new Vector2(Size.x - OutMargin * 2f, Size.y - OutMargin * 2f);
+
+            Vector2 ViewRectSize = new Vector2(OutRectSize.x - 18f, list.Count * ButtonHeight);
+
+            // scroll rects
+            Rect RectMargin = new Rect(Position, Size);
+            Rect RectOut = new Rect(OutRectPos, OutRectSize);
+            Rect RectView = new Rect(Vector2.zero, ViewRectSize);
+
+            // draw and decorate tab
+            Widgets.DrawBox(RectMargin);
+            Widgets.DrawHighlight(RectMargin);
+
+            // begin scroll
+            Widgets.BeginScrollView(RectOut, ref ScrollPosition, RectView);
+
+            DrawButtons(list, RectView);
+
+            Widgets.EndScrollView();
+        }
+
+        private bool DrawModButtons(List<ModMetaData> list, Rect ViewRect)
+        {
+            float ButtonHeight = ViewRect.height / list.Count;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                Rect Button = new Rect(0f, i * ButtonHeight, ViewRect.width, ButtonHeight);
+
+                // draw and decorate button
+                Widgets.DrawHighlightIfMouseover(Button);
+
+                if (Widgets.ButtonText(Button, list[i].Name, false))
+                {
+                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                    SelectedMod = list[i];
+                }
+            }
+
+            return true;
+        }
+
+        private bool DrawCategoryButtons()
+        {
+            return true;
+        }
+
+        private bool DrawThingButtons(List<RecipeDef> list, Rect ViewRect)
+        {
+            float ButtonHeight = ViewRect.height / list.Count;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                Rect Button = new Rect(0f, i * ButtonHeight, ViewRect.width, ButtonHeight);
+
+                // draw and decorate button
+                Widgets.DrawHighlightIfMouseover(Button);
+
+                if (Widgets.ButtonText(Button, list[i].ProducedThingDef.label, false))
+                {
+                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                    SelectedThingDef = list[i].ProducedThingDef;
+                }
+            }
+
+            return true;
+        }
+
+        private void DrawModsTab(List<ModMetaData> mods)
+        {
+            // constants
+            float ButtonHeight = 30f;
+            float OutMargin = 5f;
+
+            Vector2 TabSize = new Vector2(RequestedTabSize.x - Margin * 2f, RequestedTabSize.y - Margin * 2f);
+
+            Vector2 MarginRectSize = new Vector2(TabSize.x / 2f, TabSize.y / 2f);
+            Vector2 MarginRectPos = new Vector2(TabSize.x / 2f * 0f, TabSize.y / 2f * 0f);
+
+            Vector2 OutRectSize = new Vector2(MarginRectSize.x - OutMargin * 2f, MarginRectSize.y - OutMargin * 2f);
+            Vector2 OutRectPos = new Vector2(MarginRectPos.x + OutMargin, MarginRectPos.y + OutMargin);
+
+            Vector2 ViewRectSize = new Vector2(OutRectSize.x - 18f, mods.Count * ButtonHeight);
+
+            // scroll rects
+            Rect RectMargin = new Rect(MarginRectPos, MarginRectSize);
+            Rect RectOut = new Rect(OutRectPos, OutRectSize);
+            Rect RectView = new Rect(Vector2.zero, ViewRectSize);
+
+            // draw and decorate tab
+            Widgets.DrawBox(RectMargin);
+            Widgets.DrawHighlight(RectMargin);
+
+            // begin scroll
+            Widgets.BeginScrollView(RectOut, ref _scrollPositionModTab, RectView);
+
+            for (int i = 0; i < mods.Count; i++)
+            {
+                Rect Button = new Rect(0f, i * ButtonHeight, ViewRectSize.x, ButtonHeight);
+
+                // draw and decorate button
+                Widgets.DrawHighlightIfMouseover(Button);
+
+                if (Widgets.ButtonText(Button, mods[i].Name, false))
+                {
+                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                    SelectedMod = mods[i];
+                }
+            }
+
+            Widgets.EndScrollView();
         }
 
         private void DrawCategoryTab()
         {
-            Rect rectView = new Rect(0f, 0f, 300f, RequestedTabSize.y - 10);
-            Rect rectSize = new Rect(0f, 0f, 280f, CategoryList.Count * 52f + 5f);
+            // constants
+            float ButtonHeight = 30f;
+            float OutMargin = 5f;
 
-            Widgets.DrawBox(rectView);
-            Widgets.DrawHighlight(rectView);
-            Widgets.BeginScrollView(rectView, ref _scrollPositionCateg, rectSize);
-            // draw button for each catagory
-            for (int i = 0; i < CategoryList.Count; i++)
-            {
-                Rect CusBut = new Rect(5f, i * 52f + 1, 280f, 51f);
-                Widgets.DrawHighlightIfMouseover(CusBut);
-                Texture2D previewImage = null;
-                previewImage = CategoryList[i].icon;
-                Widgets.DrawTextureFitted(CusBut, previewImage, 1f);
-                if (Widgets.ButtonText(CusBut, $"{CategoryList[i].label}", false))
-                {
-                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                    SelectedCategoryList = CategoryList[i].childThingDefs;
-                }
-                Widgets.DrawLineHorizontal(0f, i * 52f, 285f);
-            }
+            Vector2 TabSize = new Vector2(RequestedTabSize.x - Margin * 2f, RequestedTabSize.y - Margin * 2f);
+
+            Vector2 MarginRectSize = new Vector2(TabSize.x / 2f, TabSize.y / 2f);
+            Vector2 MarginRectPos = new Vector2(TabSize.x / 2f * 0f, TabSize.y / 2f * 1f);
+
+            Vector2 OutRectSize = new Vector2(MarginRectSize.x - OutMargin * 2f, MarginRectSize.y - OutMargin * 2f);
+            Vector2 OutRectPos = new Vector2(MarginRectPos.x + OutMargin, MarginRectPos.y + OutMargin);
+
+            Vector2 ViewRectSize = new Vector2(OutRectSize.x - 18f, 0f * ButtonHeight);
+
+            // scroll rects
+            Rect RectMargin = new Rect(MarginRectPos, MarginRectSize);
+            Rect RectOut = new Rect(OutRectPos, OutRectSize);
+            Rect RectView = new Rect(Vector2.zero, ViewRectSize);
+
+            // draw and decorate tab
+            Widgets.DrawBox(RectMargin);
+            Widgets.DrawHighlight(RectMargin);
+
+            // begin scroll
+            Widgets.BeginScrollView(RectOut, ref _scrollPositionModTab, RectView);
+
+            //for (int i = 0; i < mods.Count; i++)
+            //{
+            //    Rect Button = new Rect(0f, i * ButtonHeight, ViewRectSize.x, ButtonHeight);
+
+            //    // draw and decorate button
+            //    Widgets.DrawHighlightIfMouseover(Button);
+
+            //    if (Widgets.ButtonText(Button, mods[i].Name, false))
+            //    {
+            //        SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+            //        SelectedMod = mods[i];
+            //    }
+            //}
+
             Widgets.EndScrollView();
         }
 
-        private void DrawItemsTab()
+        private void DrawItemsTab(List<RecipeDef> craftables)
         {
-            Rect rectView = new Rect(300f, 0f, 300f, RequestedTabSize.y - 10);
-            Widgets.DrawBox(rectView);
-            Widgets.DrawHighlight(rectView);
-            if (SelectedCategoryList != null)
-            {
+            // constants
+            float ButtonHeight = 30f;
+            float OutMargin = 5f;
 
-                Rect rectSize = new Rect(0f, 0f, 280f, SelectedCategoryList.Count * 52f + 5f);
-                Widgets.BeginScrollView(rectView, ref _scrollPositionThing, rectSize);
-                // draw button for each item in selected catagory
-                for (int i = 0; i < SelectedCategoryList.Count; i++)
+            Vector2 TabSize = new Vector2(RequestedTabSize.x - Margin * 2f, RequestedTabSize.y - Margin * 2f);
+
+            Vector2 MarginRectSize = new Vector2(TabSize.x / 2f, TabSize.y / 3f * 2);
+            Vector2 MarginRectPos = new Vector2(TabSize.x / 2f * 1f, TabSize.y / 2f * 0f);
+
+            Vector2 OutRectSize = new Vector2(MarginRectSize.x - OutMargin * 2f, MarginRectSize.y - OutMargin * 2f);
+            Vector2 OutRectPos = new Vector2(MarginRectPos.x + OutMargin, MarginRectPos.y + OutMargin);
+
+            Vector2 ViewRectSize = new Vector2(OutRectSize.x - 18f, craftables.Count * ButtonHeight);
+
+            // scroll rects
+            Rect RectMargin = new Rect(MarginRectPos, MarginRectSize);
+            Rect RectOut = new Rect(OutRectPos, OutRectSize);
+            Rect RectView = new Rect(Vector2.zero, ViewRectSize);
+
+            // draw and decorate tab
+            Widgets.DrawBox(RectMargin);
+            Widgets.DrawHighlight(RectMargin);
+
+            // begin scroll
+            Widgets.BeginScrollView(RectOut, ref _scrollPositionThingTab, RectView);
+
+            for (int i = 0; i < craftables.Count; i++)
+            {
+                Rect Button = new Rect(0f, i * ButtonHeight, ViewRectSize.x, ButtonHeight);
+
+                // draw and decorate button
+                Widgets.DrawHighlightIfMouseover(Button);
+
+                if (Widgets.ButtonText(Button, craftables[i].ProducedThingDef.label, false))
                 {
-                    Rect CusBut = new Rect(5f, i * 52f + 1, 280f, 51f);
-                    Widgets.DrawHighlightIfMouseover(CusBut);
-                    Texture2D previewImage = null;
-                    previewImage = SelectedCategoryList[i].uiIcon;
-                    // give icon color
-                    Color guicolor = GUI.color;
-                    GUI.color = SelectedCategoryList[i].uiIconColor;
-                    Widgets.DrawTextureFitted(CusBut, previewImage, 1f);
-                    GUI.color = guicolor;
-                    if (Widgets.ButtonText(CusBut, $"{SelectedCategoryList[i].label}", false))
-                    {
-                        SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                        SelectedThingDef = SelectedCategoryList[i];
-                    }
-                    Widgets.DrawLineHorizontal(0f, i * 52f, 285f);
+                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                    SelectedThingDef = craftables[i].ProducedThingDef;
                 }
-                Widgets.EndScrollView();
             }
+
+            Widgets.EndScrollView();
         }
 
         private void DrawItemDescription()
         {
-            if (SelectedThingDef != null)
-            {
-                Widgets.Label(new Rect(605f, 0f, 395f, 200f), SelectedThingDef.description);
-                Widgets.Label(new Rect(605f, 200f, 395f, 100f), SelectedThingDef.modContentPack.Name);
-                Widgets.Label(new Rect(605f, 220f, 395f, 100f), SelectedThingDef.label);
-                Widgets.Label(new Rect(605f, 240f, 395f, 100f), SelectedThingDef.FirstThingCategory.label);
-                Widgets.Label(new Rect(605f, 260f, 395f, 100f), SelectedThingDef.category.ToString());
-                RecipeDef tr = FindRecipeFromThing(SelectedThingDef);
-                if (tr != null)
-                {
-                    if (Widgets.ButtonText(new Rect(605f, 600f, 395f, 95f), "Craft"))
-                    {
-                        Log.Message(tr.defName + " : " + tr.label);
-                        Widgets.InfoCardButton(0f, 0f, SelectedThingDef);
-                        List<Building_WorkTable> worktablesOnMap =
-                            Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
-                        foreach (Building_WorkTable table in worktablesOnMap)
-                        {
-                            table.BillStack.AddBill(FindRecipeFromThing(SelectedThingDef).MakeNewBill());
-                        }
-                    }
-                }
-            }
         }
 
-        private RecipeDef FindRecipeFromThing(ThingDef thing)
+        private void FilterCraftables(out List<RecipeDef> FilteredList, ModMetaData mod)
         {
-            foreach (RecipeDef recipe in DefDatabase<RecipeDef>.AllDefsListForReading)
-                if (ThingDef.Equals(recipe.ProducedThingDef, thing))
-                    return recipe;
-            return null;
+            FilteredList = null;
+        }
+
+        private List<RecipeDef> FindRecipe(ThingDef thing)
+        {
+            //return DefDatabase<RecipeDef>.AllDefs.Where(def => def.products.Select(defCount => defCount.thingDef).Contains(thing)).ToList();
+            // may be faster than getting from defdatabase because we are reading from a list instead of ienum
+            return RecipesList.Where(def => def.products.Select(defCount => defCount.thingDef).Contains(thing)).ToList();
         }
     }
 }
