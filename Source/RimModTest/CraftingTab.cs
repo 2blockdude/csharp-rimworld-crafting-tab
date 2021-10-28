@@ -20,47 +20,96 @@ namespace BlockdudesTabs
         public override MainTabWindowAnchor Anchor => MainTabWindowAnchor.Left;
         protected override float Margin => 5f;
 
+        // true tab size after margins
+        public static Vector2 TabSize;
+
         // keeps track of scroll
         internal static Vector2 _scrollPositionCategoryTab = Vector2.zero;
         internal static Vector2 _scrollPositionThingTab = Vector2.zero;
         internal static Vector2 _scrollPositionModTab = Vector2.zero;
 
         // Thing Lists
-        public static List<ModMetaData> ModsList = ModLister.AllInstalledMods.Where(mods => mods.Active).ToList();
-        public static List<RecipeDef> RecipesList = DefDatabase<RecipeDef>.AllDefsListForReading;
-        public static List<RecipeDef> CraftablesList = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).Where(def => !CraftablesList.Contains(def)).ToList();
-        public static List<RecipeDef> CraftablesFilteredList = null;
-        //public static List<ThingDef> Craftables = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).Select(def => def.ProducedThingDef).ToList();
-        public ThingDef SelectedThingDef = null;
+        public List<ModMetaData> ModsList = ModLister.AllInstalledMods.Where(mods => mods.Active).ToList();
+        public List<ThingCategoryDef> CategoryList = DefDatabase<ThingCategoryDef>.AllDefsListForReading;
+        public List<RecipeDef> RecipesList = DefDatabase<RecipeDef>.AllDefsListForReading;
+        public List<RecipeDef> CraftablesList = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).ToList();
+
+        public List<RecipeDef> CraftablesFilteredList = null;
+
+        // selected things to use in filter
+        public ThingCategoryDef SelectedCategory = null;
         public ModMetaData SelectedMod = null;
+        public RecipeDef SelectedThingDef = null;
+
+        //public static List<ThingDef> Craftables = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).Select(def => def.ProducedThingDef).ToList();
 
         public CraftingTab()
         {
             base.draggable = false;
             base.resizeable = false;
             _instance = this;
+
+            // gives me the tab size after margin
+            TabSize = new Vector2(RequestedTabSize.x - Margin * 2f, RequestedTabSize.y - Margin * 2f);
+            ModsList.Insert(0, null);
+            CategoryList.Insert(0, null);
         }
 
         public override void DoWindowContents(Rect inRect)
         {
-            Vector2 TabSize = new Vector2(RequestedTabSize.x - Margin * 2f, RequestedTabSize.y - Margin * 2f);
-            DrawScrollTab(DrawModButtons, ModsList, ref _scrollPositionModTab, TabSize.x / 2f * 0f, TabSize.y / 2f * 0f, TabSize.x / 2f, TabSize.y / 2f);
-            //DrawModsTab(ModsList);
-            DrawCategoryTab();
-            DrawScrollTab(DrawThingButtons, CraftablesList, ref _scrollPositionThingTab, TabSize.x / 2f * 1f, TabSize.y / 2f * 0f, TabSize.x / 2f, TabSize.y / 3f * 2);
+            DrawScrollTab(ModsList);
+            DrawScrollTab(CategoryList);
+            DrawScrollTab(CraftablesList);
             DrawItemDescription();
         }
 
-        private void DrawScrollTab<T>(Func<List<T>, Rect, bool> DrawButtons, List<T> list, ref Vector2 ScrollPosition, float PositionX, float PositionY, float SizeX, float SizeY)
+        // wrapper function for reall drawscrolltab
+        private void DrawScrollTab(List<ModMetaData> list)
         {
-            // constants
-            float ButtonHeight = 30f;
-            float OutMargin = 5f;
+                        DrawScrollTab(
+                            DrawModButtons,                 // custom function for drawing buttons
+                            list,                           // list of course
+                            ref _scrollPositionModTab,      // scroll reference
+                            TabSize.x / 2f * 0f,            // posx
+                            TabSize.y / 2f * 0f,            // posy
+                            TabSize.x / 2f,                 // sizex
+                            TabSize.y / 2f);                // sizey
+        }
 
+        private void DrawScrollTab(List<RecipeDef> list)
+        {
+                        DrawScrollTab(
+                            DrawThingButtons,
+                            list,
+                            ref _scrollPositionThingTab,
+                            TabSize.x / 2f * 1f,             // posx
+                            TabSize.y / 2f * 0f + 30f,       // posy
+                            TabSize.x / 2f,                  // sizex
+                            TabSize.y / 3f * 2f);            // sizey
+        }
+
+        private void DrawScrollTab(List<ThingCategoryDef> list)
+        {
+                        DrawScrollTab(
+                            DrawCategoryButtons,
+                            list,
+                            ref _scrollPositionCategoryTab,
+                            TabSize.x / 2f * 0f,            // posx
+                            TabSize.y / 2f * 1f,            // posy
+                            TabSize.x / 2f,                 // sizex
+                            TabSize.y / 2f);                // sizey
+        }
+
+        private void DrawScrollTab<T>(Func<List<T>, Rect, bool> DrawButtons, List<T> list, ref Vector2 ScrollPosition, float PositionX, float PositionY, float SizeX, float SizeY, float ButtonHeight = 30f, float OutMargin = 5f, float Gap = 2f)
+        {
+            // center postition based on gaps and margins
+            PositionX += Gap;
+            PositionY += Gap;
+            SizeX -= Gap * 2f;
+            SizeY -= Gap * 2f;
             Vector2 OutRectPos = new Vector2(PositionX + OutMargin, PositionY + OutMargin);
             Vector2 OutRectSize = new Vector2(SizeX - OutMargin * 2f, SizeY - OutMargin * 2f);
-
-            Vector2 ViewRectSize = new Vector2(OutRectSize.x - 18f, list.Count * ButtonHeight);
+            Vector2 ViewRectSize = new Vector2(OutRectSize.x - 16f, list.Count * ButtonHeight);
 
             // scroll rects
             Rect RectMargin = new Rect(PositionX, PositionY, SizeX, SizeY);
@@ -74,34 +123,7 @@ namespace BlockdudesTabs
             // begin scroll
             Widgets.BeginScrollView(RectOut, ref ScrollPosition, RectView);
 
-            DrawButtons(list, RectView);
-
-            Widgets.EndScrollView();
-        }
-
-        private void DrawScrollTab<T>(Func<List<T>, Rect, bool> DrawButtons, List<T> list, ref Vector2 ScrollPosition, Vector2 Position, Vector2 Size)
-        {
-            // constants
-            float ButtonHeight = 30f;
-            float OutMargin = 5f;
-
-            Vector2 OutRectPos = new Vector2(Position.x + OutMargin, Position.y + OutMargin);
-            Vector2 OutRectSize = new Vector2(Size.x - OutMargin * 2f, Size.y - OutMargin * 2f);
-
-            Vector2 ViewRectSize = new Vector2(OutRectSize.x - 18f, list.Count * ButtonHeight);
-
-            // scroll rects
-            Rect RectMargin = new Rect(Position, Size);
-            Rect RectOut = new Rect(OutRectPos, OutRectSize);
-            Rect RectView = new Rect(Vector2.zero, ViewRectSize);
-
-            // draw and decorate tab
-            Widgets.DrawBox(RectMargin);
-            Widgets.DrawHighlight(RectMargin);
-
-            // begin scroll
-            Widgets.BeginScrollView(RectOut, ref ScrollPosition, RectView);
-
+            // expected custom function for drawing buttons
             DrawButtons(list, RectView);
 
             Widgets.EndScrollView();
@@ -118,7 +140,8 @@ namespace BlockdudesTabs
                 // draw and decorate button
                 Widgets.DrawHighlightIfMouseover(Button);
 
-                if (Widgets.ButtonText(Button, list[i].Name, false))
+                string ButtonTitle = list[i] == null ? "All" : list[i].Name;
+                if (Widgets.ButtonText(Button, ButtonTitle, false))
                 {
                     SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                     SelectedMod = list[i];
@@ -128,8 +151,25 @@ namespace BlockdudesTabs
             return true;
         }
 
-        private bool DrawCategoryButtons()
+        private bool DrawCategoryButtons(List<ThingCategoryDef> list, Rect ViewRect)
         {
+            float ButtonHeight = ViewRect.height / list.Count;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                Rect Button = new Rect(0f, i * ButtonHeight, ViewRect.width, ButtonHeight);
+
+                // draw and decorate button
+                Widgets.DrawHighlightIfMouseover(Button);
+
+                string ButtonTitle = list[i] == null ? "All" : list[i].label;
+                if (Widgets.ButtonText(Button, ButtonTitle, false))
+                {
+                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                    SelectedCategory = list[i];
+                }
+            }
+
             return true;
         }
 
@@ -147,146 +187,11 @@ namespace BlockdudesTabs
                 if (Widgets.ButtonText(Button, list[i].ProducedThingDef.label, false))
                 {
                     SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                    SelectedThingDef = list[i].ProducedThingDef;
+                    SelectedThingDef = list[i];
                 }
             }
 
             return true;
-        }
-
-        private void DrawModsTab(List<ModMetaData> mods)
-        {
-            // constants
-            float ButtonHeight = 30f;
-            float OutMargin = 5f;
-
-            Vector2 TabSize = new Vector2(RequestedTabSize.x - Margin * 2f, RequestedTabSize.y - Margin * 2f);
-
-            Vector2 MarginRectSize = new Vector2(TabSize.x / 2f, TabSize.y / 2f);
-            Vector2 MarginRectPos = new Vector2(TabSize.x / 2f * 0f, TabSize.y / 2f * 0f);
-
-            Vector2 OutRectSize = new Vector2(MarginRectSize.x - OutMargin * 2f, MarginRectSize.y - OutMargin * 2f);
-            Vector2 OutRectPos = new Vector2(MarginRectPos.x + OutMargin, MarginRectPos.y + OutMargin);
-
-            Vector2 ViewRectSize = new Vector2(OutRectSize.x - 18f, mods.Count * ButtonHeight);
-
-            // scroll rects
-            Rect RectMargin = new Rect(MarginRectPos, MarginRectSize);
-            Rect RectOut = new Rect(OutRectPos, OutRectSize);
-            Rect RectView = new Rect(Vector2.zero, ViewRectSize);
-
-            // draw and decorate tab
-            Widgets.DrawBox(RectMargin);
-            Widgets.DrawHighlight(RectMargin);
-
-            // begin scroll
-            Widgets.BeginScrollView(RectOut, ref _scrollPositionModTab, RectView);
-
-            for (int i = 0; i < mods.Count; i++)
-            {
-                Rect Button = new Rect(0f, i * ButtonHeight, ViewRectSize.x, ButtonHeight);
-
-                // draw and decorate button
-                Widgets.DrawHighlightIfMouseover(Button);
-
-                if (Widgets.ButtonText(Button, mods[i].Name, false))
-                {
-                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                    SelectedMod = mods[i];
-                }
-            }
-
-            Widgets.EndScrollView();
-        }
-
-        private void DrawCategoryTab()
-        {
-            // constants
-            float ButtonHeight = 30f;
-            float OutMargin = 5f;
-
-            Vector2 TabSize = new Vector2(RequestedTabSize.x - Margin * 2f, RequestedTabSize.y - Margin * 2f);
-
-            Vector2 MarginRectSize = new Vector2(TabSize.x / 2f, TabSize.y / 2f);
-            Vector2 MarginRectPos = new Vector2(TabSize.x / 2f * 0f, TabSize.y / 2f * 1f);
-
-            Vector2 OutRectSize = new Vector2(MarginRectSize.x - OutMargin * 2f, MarginRectSize.y - OutMargin * 2f);
-            Vector2 OutRectPos = new Vector2(MarginRectPos.x + OutMargin, MarginRectPos.y + OutMargin);
-
-            Vector2 ViewRectSize = new Vector2(OutRectSize.x - 18f, 0f * ButtonHeight);
-
-            // scroll rects
-            Rect RectMargin = new Rect(MarginRectPos, MarginRectSize);
-            Rect RectOut = new Rect(OutRectPos, OutRectSize);
-            Rect RectView = new Rect(Vector2.zero, ViewRectSize);
-
-            // draw and decorate tab
-            Widgets.DrawBox(RectMargin);
-            Widgets.DrawHighlight(RectMargin);
-
-            // begin scroll
-            Widgets.BeginScrollView(RectOut, ref _scrollPositionModTab, RectView);
-
-            //for (int i = 0; i < mods.Count; i++)
-            //{
-            //    Rect Button = new Rect(0f, i * ButtonHeight, ViewRectSize.x, ButtonHeight);
-
-            //    // draw and decorate button
-            //    Widgets.DrawHighlightIfMouseover(Button);
-
-            //    if (Widgets.ButtonText(Button, mods[i].Name, false))
-            //    {
-            //        SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-            //        SelectedMod = mods[i];
-            //    }
-            //}
-
-            Widgets.EndScrollView();
-        }
-
-        private void DrawItemsTab(List<RecipeDef> craftables)
-        {
-            // constants
-            float ButtonHeight = 30f;
-            float OutMargin = 5f;
-
-            Vector2 TabSize = new Vector2(RequestedTabSize.x - Margin * 2f, RequestedTabSize.y - Margin * 2f);
-
-            Vector2 MarginRectSize = new Vector2(TabSize.x / 2f, TabSize.y / 3f * 2);
-            Vector2 MarginRectPos = new Vector2(TabSize.x / 2f * 1f, TabSize.y / 2f * 0f);
-
-            Vector2 OutRectSize = new Vector2(MarginRectSize.x - OutMargin * 2f, MarginRectSize.y - OutMargin * 2f);
-            Vector2 OutRectPos = new Vector2(MarginRectPos.x + OutMargin, MarginRectPos.y + OutMargin);
-
-            Vector2 ViewRectSize = new Vector2(OutRectSize.x - 18f, craftables.Count * ButtonHeight);
-
-            // scroll rects
-            Rect RectMargin = new Rect(MarginRectPos, MarginRectSize);
-            Rect RectOut = new Rect(OutRectPos, OutRectSize);
-            Rect RectView = new Rect(Vector2.zero, ViewRectSize);
-
-            // draw and decorate tab
-            Widgets.DrawBox(RectMargin);
-            Widgets.DrawHighlight(RectMargin);
-
-            // begin scroll
-            Widgets.BeginScrollView(RectOut, ref _scrollPositionThingTab, RectView);
-
-            for (int i = 0; i < craftables.Count; i++)
-            {
-                Rect Button = new Rect(0f, i * ButtonHeight, ViewRectSize.x, ButtonHeight);
-
-                // draw and decorate button
-                Widgets.DrawHighlightIfMouseover(Button);
-
-                if (Widgets.ButtonText(Button, craftables[i].ProducedThingDef.label, false))
-                {
-                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                    SelectedThingDef = craftables[i].ProducedThingDef;
-                }
-            }
-
-            Widgets.EndScrollView();
         }
 
         private void DrawItemDescription()
