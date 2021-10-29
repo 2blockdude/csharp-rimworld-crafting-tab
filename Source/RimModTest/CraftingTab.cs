@@ -14,7 +14,7 @@ namespace BlockdudesTabs
     [StaticConstructorOnStartup]
     public class CraftingTab : MainTabWindow
     {
-        // Window Settings
+        // Tab Settings
         public static MainTabWindow _instance { get; private set; }
         public override Vector2 RequestedTabSize => new Vector2(1000f, 700f);
         public override MainTabWindowAnchor Anchor => MainTabWindowAnchor.Left;
@@ -28,20 +28,18 @@ namespace BlockdudesTabs
         internal static Vector2 _scrollPositionThingTab = Vector2.zero;
         internal static Vector2 _scrollPositionModTab = Vector2.zero;
 
-        // Thing Lists
-        public List<ModMetaData> ModsList = ModLister.AllInstalledMods.Where(mods => mods.Active).ToList();
-        public List<ThingCategoryDef> CategoryList = DefDatabase<ThingCategoryDef>.AllDefsListForReading;
-        public List<RecipeDef> RecipesList = DefDatabase<RecipeDef>.AllDefsListForReading;
-        public List<RecipeDef> CraftablesList = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).ToList();
+        // Lists
+        public static List<ModMetaData> ModsList = ModLister.AllInstalledMods.Where(mods => mods.Active).ToList();
+        public static List<ThingCategoryDef> CategoryList = DefDatabase<ThingCategoryDef>.AllDefsListForReading;
+        public static List<RecipeDef> RecipesList = DefDatabase<RecipeDef>.AllDefsListForReading;
+        public static List<RecipeDef> CraftablesList = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).ToList();
 
-        public List<RecipeDef> CraftablesFilteredList = null;
+        public List<RecipeDef> CraftablesFilteredList = CraftablesList.ListFullCopy();
 
         // selected things to use in filter
         public ThingCategoryDef SelectedCategory = null;
         public ModMetaData SelectedMod = null;
         public RecipeDef SelectedThingDef = null;
-
-        //public static List<ThingDef> Craftables = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).Select(def => def.ProducedThingDef).ToList();
 
         public CraftingTab()
         {
@@ -59,7 +57,7 @@ namespace BlockdudesTabs
         {
             DrawScrollTab(ModsList);
             DrawScrollTab(CategoryList);
-            DrawScrollTab(CraftablesList);
+            DrawScrollTab(CraftablesFilteredList);
             DrawItemDescription();
         }
 
@@ -76,18 +74,6 @@ namespace BlockdudesTabs
                             TabSize.y / 2f);                // sizey
         }
 
-        private void DrawScrollTab(List<RecipeDef> list)
-        {
-                        DrawScrollTab(
-                            DrawThingButtons,
-                            list,
-                            ref _scrollPositionThingTab,
-                            TabSize.x / 2f * 1f,             // posx
-                            TabSize.y / 2f * 0f + 30f,       // posy
-                            TabSize.x / 2f,                  // sizex
-                            TabSize.y / 3f * 2f);            // sizey
-        }
-
         private void DrawScrollTab(List<ThingCategoryDef> list)
         {
                         DrawScrollTab(
@@ -98,6 +84,18 @@ namespace BlockdudesTabs
                             TabSize.y / 2f * 1f,            // posy
                             TabSize.x / 2f,                 // sizex
                             TabSize.y / 2f);                // sizey
+        }
+
+        private void DrawScrollTab(List<RecipeDef> list)
+        {
+                        DrawScrollTab(
+                            DrawThingButtons,
+                            list,
+                            ref _scrollPositionThingTab,
+                            TabSize.x / 2f * 1f,             // posx
+                            TabSize.y / 2f * 0f + 30f,       // posy
+                            TabSize.x / 2f,                  // sizex
+                            TabSize.y / 3f * 2f);            // sizey
         }
 
         private void DrawScrollTab<T>(Func<List<T>, Rect, bool> DrawButtons, List<T> list, ref Vector2 ScrollPosition, float PositionX, float PositionY, float SizeX, float SizeY, float ButtonHeight = 30f, float OutMargin = 5f, float Gap = 2f)
@@ -145,6 +143,7 @@ namespace BlockdudesTabs
                 {
                     SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                     SelectedMod = list[i];
+                    FilterCraftables();
                 }
             }
 
@@ -167,6 +166,7 @@ namespace BlockdudesTabs
                 {
                     SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                     SelectedCategory = list[i];
+                    FilterCraftables();
                 }
             }
 
@@ -198,9 +198,15 @@ namespace BlockdudesTabs
         {
         }
 
-        private void FilterCraftables(out List<RecipeDef> FilteredList, ModMetaData mod)
+        private void FilterCraftables()
         {
-            FilteredList = null;
+            CraftablesFilteredList = CraftablesList;
+
+            if (SelectedMod != null)
+                CraftablesFilteredList = CraftablesFilteredList.Where(def => def.modContentPack.ModMetaData == SelectedMod).ToList();
+
+            if (SelectedCategory != null)
+                CraftablesFilteredList = CraftablesFilteredList.Where(def => def.ProducedThingDef.FirstThingCategory == SelectedCategory).ToList();
         }
 
         private List<RecipeDef> FindRecipe(ThingDef thing)
