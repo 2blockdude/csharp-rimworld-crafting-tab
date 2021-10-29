@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Reflection;
 using RimWorld;
 using UnityEngine;
 using Verse.Sound;
@@ -34,12 +35,13 @@ namespace BlockdudesTabs
         public static List<RecipeDef> RecipesList = DefDatabase<RecipeDef>.AllDefsListForReading;
         public static List<RecipeDef> CraftablesList = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).ToList();
 
-        public List<RecipeDef> CraftablesFilteredList = CraftablesList.ListFullCopy();
+        public List<RecipeDef> CraftablesFilteredList = CraftablesList;
 
         // selected things to use in filter
         public ThingCategoryDef SelectedCategory = null;
         public ModMetaData SelectedMod = null;
         public RecipeDef SelectedThingDef = null;
+        public string SearchString = "";
 
         public CraftingTab()
         {
@@ -58,6 +60,7 @@ namespace BlockdudesTabs
             DrawScrollTab(ModsList);
             DrawScrollTab(CategoryList);
             DrawScrollTab(CraftablesFilteredList);
+            DrawSearchBar();
             DrawItemDescription();
         }
 
@@ -98,15 +101,15 @@ namespace BlockdudesTabs
                             TabSize.y / 3f * 2f);            // sizey
         }
 
-        private void DrawScrollTab<T>(Func<List<T>, Rect, bool> DrawButtons, List<T> list, ref Vector2 ScrollPosition, float PositionX, float PositionY, float SizeX, float SizeY, float ButtonHeight = 30f, float OutMargin = 5f, float Gap = 2f)
+        private void DrawScrollTab<T>(Func<List<T>, Rect, bool> DrawButtons, List<T> list, ref Vector2 ScrollPosition, float PositionX, float PositionY, float SizeX, float SizeY, float ButtonHeight = 30f, float InMargin = 5f, float OutMargin = 2f)
         {
             // center postition based on gaps and margins
-            PositionX += Gap;
-            PositionY += Gap;
-            SizeX -= Gap * 2f;
-            SizeY -= Gap * 2f;
-            Vector2 OutRectPos = new Vector2(PositionX + OutMargin, PositionY + OutMargin);
-            Vector2 OutRectSize = new Vector2(SizeX - OutMargin * 2f, SizeY - OutMargin * 2f);
+            PositionX += OutMargin;
+            PositionY += OutMargin;
+            SizeX -= OutMargin * 2f;
+            SizeY -= OutMargin * 2f;
+            Vector2 OutRectPos = new Vector2(PositionX + InMargin, PositionY + InMargin);
+            Vector2 OutRectSize = new Vector2(SizeX - InMargin * 2f, SizeY - InMargin * 2f);
             Vector2 ViewRectSize = new Vector2(OutRectSize.x - 16f, list.Count * ButtonHeight);
 
             // scroll rects
@@ -114,9 +117,9 @@ namespace BlockdudesTabs
             Rect RectOut = new Rect(OutRectPos, OutRectSize);
             Rect RectView = new Rect(Vector2.zero, ViewRectSize);
 
-            // draw and decorate tab
+            // draw, decorate, and color tab
             Widgets.DrawBox(RectMargin);
-            Widgets.DrawHighlight(RectMargin);
+            //Widgets.DrawHighlight(RectMargin);
 
             // begin scroll
             Widgets.BeginScrollView(RectOut, ref ScrollPosition, RectView);
@@ -136,6 +139,7 @@ namespace BlockdudesTabs
                 Rect Button = new Rect(0f, i * ButtonHeight, ViewRect.width, ButtonHeight);
 
                 // draw and decorate button
+                if (SelectedMod == list[i]) Widgets.DrawHighlight(Button);
                 Widgets.DrawHighlightIfMouseover(Button);
 
                 string ButtonTitle = list[i] == null ? "All" : list[i].Name;
@@ -159,6 +163,7 @@ namespace BlockdudesTabs
                 Rect Button = new Rect(0f, i * ButtonHeight, ViewRect.width, ButtonHeight);
 
                 // draw and decorate button
+                if (SelectedCategory == list[i]) Widgets.DrawHighlight(Button);
                 Widgets.DrawHighlightIfMouseover(Button);
 
                 string ButtonTitle = list[i] == null ? "All" : list[i].label;
@@ -182,6 +187,7 @@ namespace BlockdudesTabs
                 Rect Button = new Rect(0f, i * ButtonHeight, ViewRect.width, ButtonHeight);
 
                 // draw and decorate button
+                if (SelectedThingDef == list[i]) Widgets.DrawHighlight(Button);
                 Widgets.DrawHighlightIfMouseover(Button);
 
                 if (Widgets.ButtonText(Button, list[i].ProducedThingDef.label, false))
@@ -194,25 +200,78 @@ namespace BlockdudesTabs
             return true;
         }
 
+        private void DrawSearchBar()
+        {
+            // constants
+            float PositionX = TabSize.x / 2f;
+            float PositionY = 0f;
+            float SizeX = TabSize.x / 2;
+            float SizeY = 30f;
+
+            float OutMargin = 2f;
+
+            // center postition based on gaps and margins
+            PositionX += OutMargin;
+            PositionY += OutMargin;
+            SizeX -= OutMargin * 2f;
+            SizeY -= OutMargin * 2f;
+
+            // scroll rects
+            Rect TextBox = new Rect(PositionX + SizeY, PositionY, SizeX - SizeY * 2, SizeY);
+            Rect ButtonClear = new Rect(TextBox.x + TextBox.width, PositionY, SizeY, SizeY);
+            Rect SearchIcon = new Rect(TextBox.x - SizeY, PositionY, SizeY, SizeY);
+
+            Widgets.DrawTextureFitted(SearchIcon, TexButton.Search, 1f);
+
+            if (Widgets.ButtonImage(ButtonClear, TexButton.DeleteX, Color.white, Color.white * GenUI.SubtleMouseoverColor, true))
+            {
+                SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                SearchString = "";
+                FilterCraftables();
+            }
+
+            // need to give the textbox a name inorder to do the loose focus thing below
+            string TextBoxName = "search";
+            GUI.SetNextControlName(TextBoxName);
+
+            // draw textbox and make sure to store the string entered in the box
+            SearchString = Widgets.TextField(TextBox, SearchString);
+
+            bool Focused = GUI.GetNameOfFocusedControl() == TextBoxName;
+
+            // loose focus so the filter does not always run
+			if (Input.GetMouseButtonDown(0) && !Mouse.IsOver(TextBox) && Focused)
+				GUI.FocusControl(null);
+
+            // only filter if focused and the user presses a keyboard key are typing
+            if (Focused && Event.current.isKey)
+                FilterCraftables();
+        }
+
         private void DrawItemDescription()
         {
         }
 
         private void FilterCraftables()
         {
+            // reset
             CraftablesFilteredList = CraftablesList;
 
+            // filter mod
             if (SelectedMod != null)
                 CraftablesFilteredList = CraftablesFilteredList.Where(def => def.modContentPack.ModMetaData == SelectedMod).ToList();
 
+            // filter category
             if (SelectedCategory != null)
                 CraftablesFilteredList = CraftablesFilteredList.Where(def => def.ProducedThingDef.FirstThingCategory == SelectedCategory).ToList();
+
+            // filter search
+            if (SearchString != "")
+                CraftablesFilteredList = CraftablesFilteredList.Where(def => def.ProducedThingDef.label.IndexOf(SearchString, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
         }
 
         private List<RecipeDef> FindRecipe(ThingDef thing)
         {
-            //return DefDatabase<RecipeDef>.AllDefs.Where(def => def.products.Select(defCount => defCount.thingDef).Contains(thing)).ToList();
-            // may be faster than getting from defdatabase because we are reading from a list instead of ienum
             return RecipesList.Where(def => def.products.Select(defCount => defCount.thingDef).Contains(thing)).ToList();
         }
     }
