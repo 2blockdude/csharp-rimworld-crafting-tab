@@ -41,7 +41,7 @@ namespace BlockdudesTabs
 
             Widgets.DrawTextureFitted(SearchIcon, TexButton.Search, 1f);
 
-            if (Widgets.ButtonImage(ButtonClear, TexButton.DeleteX, Color.white, Color.white * GenUI.SubtleMouseoverColor, true))
+            if (Widgets.ButtonImage(ButtonClear, TexButton.CloseXBig, Color.white, Color.white * GenUI.SubtleMouseoverColor, true))
             {
                 Verse.Sound.SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 SearchString = "";
@@ -85,5 +85,24 @@ namespace BlockdudesTabs
                 Widgets.DrawBox(RectMargin);
         }
 
+        public static Rect NewRectWithMargins(float X, float Y, float Width, float Height, float OutMargin, float InMargin, bool Outline = true)
+        {
+            Rect RectMargin = new Rect(
+                X + OutMargin,
+                Y + OutMargin,
+                Width - OutMargin * 2f,
+                Height - OutMargin * 2f);
+
+            Rect RectNew = new Rect(
+                RectMargin.x + InMargin,
+                RectMargin.y + InMargin,
+                RectMargin.width - InMargin * 2f,
+                RectMargin.height - InMargin * 2f);
+
+            if (Outline)
+                Widgets.DrawBox(RectMargin);
+
+            return RectNew;
+        }
     }
 }

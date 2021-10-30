@@ -226,7 +226,7 @@ namespace BlockdudesTabs
                 TabUI.CreateMargins(ref RectWorkBenches, 0f, 5f, true);
 
                 Widgets.Label(ThingLabel, SelectedThingDef.ProducedThingDef.label);
-                Widgets.LabelScrollable(RectDescption, SelectedThingDef.ProducedThingDef.description + "\n", ref _scrollPositionDescription);
+                Widgets.LabelScrollable(RectDescption, SelectedThingDef.ProducedThingDef.description, ref _scrollPositionDescription);
                 TabUI.DrawScrollTab(DrawRecipeButtons, SelectedThingDef.ingredients, ref _scrollPositionRecipe, RectRecipe);
                 TabUI.DrawScrollTab(DrawWorkBenchesButtons, SelectedThingDef.AllRecipeUsers.ToList(), ref _scrollPositionWorkBenches, RectWorkBenches);
             }
