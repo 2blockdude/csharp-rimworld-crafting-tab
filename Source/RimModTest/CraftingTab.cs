@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Reflection;
 using RimWorld;
 using UnityEngine;
 using Verse.Sound;
@@ -28,6 +24,9 @@ namespace BlockdudesTabs
         internal static Vector2 _scrollPositionCategoryTab = Vector2.zero;
         internal static Vector2 _scrollPositionThingTab = Vector2.zero;
         internal static Vector2 _scrollPositionModTab = Vector2.zero;
+        internal static Vector2 _scrollPositionRecipe = Vector2.zero;
+        internal static Vector2 _scrollPositionDescription = Vector2.zero;
+        internal static Vector2 _scrollPositionWorkBenches = Vector2.zero;
 
         // Lists
         public static List<ModMetaData> ModsList = ModLister.AllInstalledMods.Where(mods => mods.Active).ToList();
@@ -64,193 +63,175 @@ namespace BlockdudesTabs
             DrawItemDescription();
         }
 
-        // wrapper function for reall drawscrolltab
+        // wrapper function for real drawscrolltab
         private void DrawScrollTab(List<ModMetaData> list)
         {
-                        DrawScrollTab(
-                            DrawModButtons,                 // custom function for drawing buttons
-                            list,                           // list of course
-                            ref _scrollPositionModTab,      // scroll reference
-                            TabSize.x / 2f * 0f,            // posx
-                            TabSize.y / 2f * 0f,            // posy
-                            TabSize.x / 2f,                 // sizex
-                            TabSize.y / 2f);                // sizey
+            Rect RectTab = new Rect(
+                TabSize.x / 2f * 0f,            // posx
+                TabSize.y / 2f * 0f,            // posy
+                TabSize.x / 2f,                 // sizex
+                TabSize.y / 2f);                // sizey
+
+            TabUI.CreateMargins(ref RectTab, 2f, 5f, true);
+
+            TabUI.DrawScrollTab(
+                DrawModButtons,                 // custom function for drawing buttons
+                list,                           // list of course
+                ref _scrollPositionModTab,      // scroll reference
+                RectTab);
         }
 
         private void DrawScrollTab(List<ThingCategoryDef> list)
         {
-                        DrawScrollTab(
-                            DrawCategoryButtons,
-                            list,
-                            ref _scrollPositionCategoryTab,
-                            TabSize.x / 2f * 0f,            // posx
-                            TabSize.y / 2f * 1f,            // posy
-                            TabSize.x / 2f,                 // sizex
-                            TabSize.y / 2f);                // sizey
+            Rect RectTab = new Rect(
+                TabSize.x / 2f * 0f,            // posx
+                TabSize.y / 2f * 1f,            // posy
+                TabSize.x / 2f,                 // sizex
+                TabSize.y / 2f);                // sizey
+
+            TabUI.CreateMargins(ref RectTab, 2f, 5f, true);
+
+            TabUI.DrawScrollTab(
+                DrawCategoryButtons,
+                list,
+                ref _scrollPositionCategoryTab,
+                RectTab);
         }
 
         private void DrawScrollTab(List<RecipeDef> list)
         {
-                        DrawScrollTab(
-                            DrawThingButtons,
-                            list,
-                            ref _scrollPositionThingTab,
-                            TabSize.x / 2f * 1f,             // posx
-                            TabSize.y / 2f * 0f + 30f,       // posy
-                            TabSize.x / 2f,                  // sizex
-                            TabSize.y / 3f * 2f);            // sizey
-        }
+            Rect RectTab = new Rect(
+                TabSize.x / 2f * 1f,             // posx
+                TabSize.y / 2f * 0f + 30f,       // posy
+                TabSize.x / 2f,                  // sizex
+                TabSize.y / 3f * 2f);            // sizey
 
-        private void DrawScrollTab<T>(Func<List<T>, Rect, bool> DrawButtons, List<T> list, ref Vector2 ScrollPosition, float PositionX, float PositionY, float SizeX, float SizeY, float ButtonHeight = 30f, float InMargin = 5f, float OutMargin = 2f)
-        {
-            // center postition based on gaps and margins
-            PositionX += OutMargin;
-            PositionY += OutMargin;
-            SizeX -= OutMargin * 2f;
-            SizeY -= OutMargin * 2f;
-            Vector2 OutRectPos = new Vector2(PositionX + InMargin, PositionY + InMargin);
-            Vector2 OutRectSize = new Vector2(SizeX - InMargin * 2f, SizeY - InMargin * 2f);
-            Vector2 ViewRectSize = new Vector2(OutRectSize.x - 16f, list.Count * ButtonHeight);
+            TabUI.CreateMargins(ref RectTab, 2f, 5f, true);
 
-            // scroll rects
-            Rect RectMargin = new Rect(PositionX, PositionY, SizeX, SizeY);
-            Rect RectOut = new Rect(OutRectPos, OutRectSize);
-            Rect RectView = new Rect(Vector2.zero, ViewRectSize);
-
-            // draw, decorate, and color tab
-            Widgets.DrawBox(RectMargin);
-            //Widgets.DrawHighlight(RectMargin);
-
-            // begin scroll
-            Widgets.BeginScrollView(RectOut, ref ScrollPosition, RectView);
-
-            // expected custom function for drawing buttons
-            DrawButtons(list, RectView);
-
-            Widgets.EndScrollView();
-        }
-
-        private bool DrawModButtons(List<ModMetaData> list, Rect ViewRect)
-        {
-            float ButtonHeight = ViewRect.height / list.Count;
-
-            for (int i = 0; i < list.Count; i++)
-            {
-                Rect Button = new Rect(0f, i * ButtonHeight, ViewRect.width, ButtonHeight);
-
-                // draw and decorate button
-                if (SelectedMod == list[i]) Widgets.DrawHighlight(Button);
-                Widgets.DrawHighlightIfMouseover(Button);
-
-                string ButtonTitle = list[i] == null ? "All" : list[i].Name;
-                if (Widgets.ButtonText(Button, ButtonTitle, false))
-                {
-                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                    SelectedMod = list[i];
-                    FilterCraftables();
-                }
-            }
-
-            return true;
-        }
-
-        private bool DrawCategoryButtons(List<ThingCategoryDef> list, Rect ViewRect)
-        {
-            float ButtonHeight = ViewRect.height / list.Count;
-
-            for (int i = 0; i < list.Count; i++)
-            {
-                Rect Button = new Rect(0f, i * ButtonHeight, ViewRect.width, ButtonHeight);
-
-                // draw and decorate button
-                if (SelectedCategory == list[i]) Widgets.DrawHighlight(Button);
-                Widgets.DrawHighlightIfMouseover(Button);
-
-                string ButtonTitle = list[i] == null ? "All" : list[i].label;
-                if (Widgets.ButtonText(Button, ButtonTitle, false))
-                {
-                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                    SelectedCategory = list[i];
-                    FilterCraftables();
-                }
-            }
-
-            return true;
-        }
-
-        private bool DrawThingButtons(List<RecipeDef> list, Rect ViewRect)
-        {
-            float ButtonHeight = ViewRect.height / list.Count;
-
-            for (int i = 0; i < list.Count; i++)
-            {
-                Rect Button = new Rect(0f, i * ButtonHeight, ViewRect.width, ButtonHeight);
-
-                // draw and decorate button
-                if (SelectedThingDef == list[i]) Widgets.DrawHighlight(Button);
-                Widgets.DrawHighlightIfMouseover(Button);
-
-                if (Widgets.ButtonText(Button, list[i].ProducedThingDef.label, false))
-                {
-                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                    SelectedThingDef = list[i];
-                }
-            }
-
-            return true;
+            TabUI.DrawScrollTab(
+                DrawThingButtons,
+                list,
+                ref _scrollPositionThingTab,
+                RectTab);
         }
 
         private void DrawSearchBar()
         {
-            // constants
-            float PositionX = TabSize.x / 2f;
-            float PositionY = 0f;
-            float SizeX = TabSize.x / 2;
-            float SizeY = 30f;
+            Rect SearchBar = new Rect(
+                TabSize.x / 2f,
+                0f,
+                TabSize.x / 2f,
+                30f);
 
-            float OutMargin = 2f;
+            TabUI.CreateMargins(ref SearchBar, 2f, 0f, false);
 
-            // center postition based on gaps and margins
-            PositionX += OutMargin;
-            PositionY += OutMargin;
-            SizeX -= OutMargin * 2f;
-            SizeY -= OutMargin * 2f;
+            TabUI.DrawSearchBar(
+                FilterCraftables,
+                ref SearchString,
+                SearchBar);
+        }
 
-            // scroll rects
-            Rect TextBox = new Rect(PositionX + SizeY, PositionY, SizeX - SizeY * 2, SizeY);
-            Rect ButtonClear = new Rect(TextBox.x + TextBox.width, PositionY, SizeY, SizeY);
-            Rect SearchIcon = new Rect(TextBox.x - SizeY, PositionY, SizeY, SizeY);
+        private void DrawModButtons(ModMetaData Item, Rect Button)
+        {
+            // draw and decorate button
+            if (SelectedMod == Item) Widgets.DrawHighlight(Button);
+            Widgets.DrawHighlightIfMouseover(Button);
 
-            Widgets.DrawTextureFitted(SearchIcon, TexButton.Search, 1f);
-
-            if (Widgets.ButtonImage(ButtonClear, TexButton.DeleteX, Color.white, Color.white * GenUI.SubtleMouseoverColor, true))
+            string ButtonTitle = Item == null ? "All" : Item.Name;
+            if (Widgets.ButtonText(Button, ButtonTitle, false))
             {
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                SearchString = "";
+                SelectedMod = Item;
                 FilterCraftables();
             }
+        }
 
-            // need to give the textbox a name inorder to do the loose focus thing below
-            string TextBoxName = "search";
-            GUI.SetNextControlName(TextBoxName);
+        private void DrawCategoryButtons(ThingCategoryDef Item, Rect Button)
+        {
+            // draw and decorate button
+            if (SelectedCategory == Item) Widgets.DrawHighlight(Button);
+            Widgets.DrawHighlightIfMouseover(Button);
 
-            // draw textbox and make sure to store the string entered in the box
-            SearchString = Widgets.TextField(TextBox, SearchString);
-
-            bool Focused = GUI.GetNameOfFocusedControl() == TextBoxName;
-
-            // loose focus so the filter does not always run
-			if (Input.GetMouseButtonDown(0) && !Mouse.IsOver(TextBox) && Focused)
-				GUI.FocusControl(null);
-
-            // only filter if focused and the user presses a keyboard key are typing
-            if (Focused && Event.current.isKey)
+            string ButtonTitle = Item == null ? "All" : Item.label;
+            if (Widgets.ButtonText(Button, ButtonTitle, false))
+            {
+                SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                SelectedCategory = Item;
                 FilterCraftables();
+            }
+        }
+
+        private void DrawThingButtons(RecipeDef Item, Rect Button)
+        {
+            // draw and decorate button
+            if (SelectedThingDef == Item) Widgets.DrawHighlight(Button);
+            Widgets.DrawHighlightIfMouseover(Button);
+
+            TooltipHandler.TipRegion(Button, new TipSignal(Item.ProducedThingDef.description));
+            if (Widgets.ButtonText(Button, Item.ProducedThingDef.label, false))
+            {
+                SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                SelectedThingDef = Item;
+            }
+        }
+
+        private void DrawWorkBenchesButtons(ThingDef Item, Rect Button)
+        {
+            Widgets.Label(Button, Item.label);
+        }
+
+        private void DrawRecipeButtons(IngredientCount Item, Rect Button)
+        {
+            Widgets.Label(Button, Item.Summary);
         }
 
         private void DrawItemDescription()
         {
+            Rect RectOut = new Rect(
+                TabSize.x / 2f,
+                TabSize.y / 3f * 2f + 30f,
+                TabSize.x / 2f,
+                TabSize.y / 3f - 30f);
+
+            TabUI.CreateMargins(ref RectOut, 2f, 5f, true);
+
+            if (SelectedThingDef != null)
+            {
+                Rect ThingLabel = new Rect(
+                    RectOut.x,
+                    RectOut.y,
+                    RectOut.width / 2f,
+                    RectOut.height / 3f);
+
+                Rect RectDescption = new Rect(
+                    RectOut.x,
+                    RectOut.y + (RectOut.height / 3f),
+                    RectOut.width / 3f,
+                    RectOut.height / 3f * 2f);
+
+                Rect RectRecipe = new Rect(
+                    RectOut.x + RectOut.width / 3f,
+                    RectOut.y + RectOut.height / 3f,
+                    RectOut.width / 3f,
+                    RectOut.height / 3f * 2f);
+
+                Rect RectWorkBenches = new Rect(
+                    RectOut.x + RectOut.width / 3f * 2f,
+                    RectOut.y + RectOut.height / 3f,
+                    RectOut.width / 3f,
+                    RectOut.height / 3f * 2f);
+
+                TabUI.CreateMargins(ref RectDescption, 0f, 5f, true);
+                TabUI.CreateMargins(ref RectRecipe, 0f, 5f, true);
+                TabUI.CreateMargins(ref RectWorkBenches, 0f, 5f, true);
+
+                Widgets.Label(ThingLabel, SelectedThingDef.ProducedThingDef.label);
+                Widgets.LabelScrollable(RectDescption, SelectedThingDef.ProducedThingDef.description + "\n", ref _scrollPositionDescription);
+                TabUI.DrawScrollTab(DrawRecipeButtons, SelectedThingDef.ingredients, ref _scrollPositionRecipe, RectRecipe);
+                TabUI.DrawScrollTab(DrawWorkBenchesButtons, SelectedThingDef.AllRecipeUsers.ToList(), ref _scrollPositionWorkBenches, RectWorkBenches);
+            }
         }
+
 
         private void FilterCraftables()
         {
