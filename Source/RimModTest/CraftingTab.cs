@@ -13,12 +13,12 @@ namespace BlockdudesTabs
     {
         // Tab Settings
         public static MainTabWindow _instance { get; private set; }
-        public override Vector2 RequestedTabSize => new Vector2(1000f, 700f);
+        public override Vector2 RequestedTabSize => new Vector2(700f, 700f);
         public override MainTabWindowAnchor Anchor => MainTabWindowAnchor.Left;
         protected override float Margin => 5f;
 
         // true tab size after margins
-        public static Vector2 TabSize;
+        public Vector2 TabSize;
 
         // keeps track of scroll
         internal static Vector2 _scrollPositionCategoryTab = Vector2.zero;
@@ -29,8 +29,8 @@ namespace BlockdudesTabs
         internal static Vector2 _scrollPositionWorkBenches = Vector2.zero;
 
         // Lists
-        public static List<ModMetaData> ModsList = ModLister.AllInstalledMods.Where(mods => mods.Active).ToList();
-        public static List<ThingCategoryDef> CategoryList = DefDatabase<ThingCategoryDef>.AllDefsListForReading;
+        public static List<ModMetaData> ModsList = DefDatabase<RecipeDef>.AllDefsListForReading.Where(def => def.ProducedThingDef != null).Select(def => def.modContentPack.ModMetaData).Distinct().ToList();
+        public static List<ThingCategoryDef> CategoryList = DefDatabase<RecipeDef>.AllDefsListForReading.Where(def => def.ProducedThingDef != null).Select(def => def.ProducedThingDef.FirstThingCategory).Distinct().ToList();
         public static List<RecipeDef> RecipesList = DefDatabase<RecipeDef>.AllDefsListForReading;
         public static List<RecipeDef> CraftablesList = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).ToList();
 
@@ -49,13 +49,17 @@ namespace BlockdudesTabs
             _instance = this;
 
             // gives me the tab size after margin
-            TabSize = new Vector2(RequestedTabSize.x - Margin * 2f, RequestedTabSize.y - Margin * 2f);
+            TabSize = new Vector2(windowRect.width - Margin * 2f, windowRect.height - Margin * 2f);
             ModsList.Insert(0, null);
             CategoryList.Insert(0, null);
         }
 
         public override void DoWindowContents(Rect inRect)
         {
+            TabSize.x = windowRect.width - Margin * 2f;
+            TabSize.y = windowRect.height - Margin * 2f;
+            Text.Font = GameFont.Small;
+
             DrawScrollTab(ModsList);
             DrawScrollTab(CategoryList);
             DrawScrollTab(CraftablesFilteredList);
@@ -66,11 +70,12 @@ namespace BlockdudesTabs
         // wrapper function for real drawscrolltab
         private void DrawScrollTab(List<ModMetaData> list)
         {
+            // top third left
             Rect RectTab = new Rect(
                 TabSize.x / 2f * 0f,            // posx
                 TabSize.y / 2f * 0f,            // posy
                 TabSize.x / 2f,                 // sizex
-                TabSize.y / 2f);                // sizey
+                TabSize.y / 3f);                // sizey
 
             TabUI.CreateMargins(ref RectTab, 2f, 5f, true);
 
@@ -85,9 +90,9 @@ namespace BlockdudesTabs
         {
             Rect RectTab = new Rect(
                 TabSize.x / 2f * 0f,            // posx
-                TabSize.y / 2f * 1f,            // posy
+                TabSize.y / 3f * 1f,            // posy
                 TabSize.x / 2f,                 // sizex
-                TabSize.y / 2f);                // sizey
+                TabSize.y / 3f);                // sizey
 
             TabUI.CreateMargins(ref RectTab, 2f, 5f, true);
 
@@ -104,7 +109,7 @@ namespace BlockdudesTabs
                 TabSize.x / 2f * 1f,             // posx
                 TabSize.y / 2f * 0f + 30f,       // posy
                 TabSize.x / 2f,                  // sizex
-                TabSize.y / 3f * 2f);            // sizey
+                TabSize.y / 3f * 2f - 30f);            // sizey
 
             TabUI.CreateMargins(ref RectTab, 2f, 5f, true);
 
@@ -188,10 +193,10 @@ namespace BlockdudesTabs
         private void DrawItemDescription()
         {
             Rect RectOut = new Rect(
-                TabSize.x / 2f,
-                TabSize.y / 3f * 2f + 30f,
-                TabSize.x / 2f,
-                TabSize.y / 3f - 30f);
+                TabSize.x / 3f * 0f,
+                TabSize.y / 3f * 2f,
+                TabSize.x,
+                TabSize.y / 3f);
 
             TabUI.CreateMargins(ref RectOut, 2f, 5f, true);
 
@@ -200,8 +205,20 @@ namespace BlockdudesTabs
                 Rect ThingLabel = new Rect(
                     RectOut.x,
                     RectOut.y,
-                    RectOut.width / 2f,
-                    RectOut.height / 3f);
+                    200f,
+                    30f);
+
+                Rect RecipeReqLabel = new Rect(
+                    ThingLabel.x,
+                    ThingLabel.y + ThingLabel.height,
+                    300f,
+                    20f);
+
+                Rect ModLabel = new Rect(
+                    RecipeReqLabel.x,
+                    RecipeReqLabel.y + RecipeReqLabel.height,
+                    200f,
+                    20f);
 
                 Rect RectDescption = new Rect(
                     RectOut.x,
@@ -221,14 +238,35 @@ namespace BlockdudesTabs
                     RectOut.width / 3f,
                     RectOut.height / 3f * 2f);
 
+                Rect RectInfo = new Rect(
+                    RectOut.x + RectOut.width - 30f,
+                    RectOut.y,
+                    30f,
+                    30f);
+
+                Rect RectCraft = new Rect(
+                    RectInfo.x - 100f,
+                    RectInfo.y,
+                    100f,
+                    30f);
+
                 TabUI.CreateMargins(ref RectDescption, 0f, 5f, true);
                 TabUI.CreateMargins(ref RectRecipe, 0f, 5f, true);
                 TabUI.CreateMargins(ref RectWorkBenches, 0f, 5f, true);
+                TabUI.CreateMargins(ref RectInfo, 0f, 2f, false);
 
+                Text.Font = GameFont.Medium;
                 Widgets.Label(ThingLabel, SelectedThingDef.ProducedThingDef.label);
+                Text.Font = GameFont.Tiny;
+                Widgets.Label(RecipeReqLabel, "Required Research: " + (SelectedThingDef.researchPrerequisite == null ? "None" : SelectedThingDef.researchPrerequisite.label));
+                Widgets.Label(ModLabel, "Mod Source: " + SelectedThingDef.modContentPack.ModMetaData.Name);
+                Text.Font = GameFont.Small;
+
                 Widgets.LabelScrollable(RectDescption, SelectedThingDef.ProducedThingDef.description, ref _scrollPositionDescription);
-                TabUI.DrawScrollTab(DrawRecipeButtons, SelectedThingDef.ingredients, ref _scrollPositionRecipe, RectRecipe);
-                TabUI.DrawScrollTab(DrawWorkBenchesButtons, SelectedThingDef.AllRecipeUsers.ToList(), ref _scrollPositionWorkBenches, RectWorkBenches);
+                TabUI.DrawScrollTab(DrawRecipeButtons, SelectedThingDef.ingredients, ref _scrollPositionRecipe, RectRecipe, ButtonHeight: 45f);
+                TabUI.DrawScrollTab(DrawWorkBenchesButtons, SelectedThingDef.AllRecipeUsers.Distinct().ToList(), ref _scrollPositionWorkBenches, RectWorkBenches);
+                Widgets.ButtonImage(RectInfo, TexButton.Info, Color.white, Color.white * GenUI.SubtleMouseoverColor, true);
+                Widgets.ButtonText(RectCraft, "Craft");
             }
         }
 
@@ -237,6 +275,7 @@ namespace BlockdudesTabs
         {
             // reset
             CraftablesFilteredList = CraftablesList;
+            //_scrollPositionThingTab = Vector2.zero;
 
             // filter mod
             if (SelectedMod != null)

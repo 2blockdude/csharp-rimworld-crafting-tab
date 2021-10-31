@@ -39,11 +39,11 @@ namespace BlockdudesTabs
                 RectView.height,
                 RectView.height);
 
+            CreateMargins(ref ButtonClear, 3f, 0f, false);
             Widgets.DrawTextureFitted(SearchIcon, TexButton.Search, 1f);
-
-            if (Widgets.ButtonImage(ButtonClear, TexButton.CloseXBig, Color.white, Color.white * GenUI.SubtleMouseoverColor, true))
+            if (Widgets.ButtonImage(ButtonClear, TexButton.CloseXSmall, Color.white, Color.white * GenUI.SubtleMouseoverColor, true))
             {
-                Verse.Sound.SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                //Verse.Sound.SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 SearchString = "";
                 UpdateFunction();
             }
