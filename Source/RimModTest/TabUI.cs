@@ -10,7 +10,7 @@ namespace BlockdudesTabs
     {
         public static void DrawScrollTab<T>(Action<T, Rect> Draw, List<T> list, ref Vector2 ScrollPosition, Rect RectOut, float ButtonHeight = 30f)
         {
-            Rect RectView = new Rect(0f, 0f, RectOut.width - 16f, list == null ? 1f : list.Count * ButtonHeight);
+            Rect RectView = new Rect(0f, 0f, RectOut.width - 16f, list.Count * ButtonHeight);
             Widgets.BeginScrollView(RectOut, ref ScrollPosition, RectView);
 
             // expected custom function for drawing buttons
@@ -20,8 +20,10 @@ namespace BlockdudesTabs
             Widgets.EndScrollView();
         }
 
-        public static void DrawSearchBar(Action UpdateFunction, ref string SearchString, Rect RectView)
+        public static bool DrawSearchBar(ref string SearchString, Rect RectView)
         {
+            bool update = false;
+
             // scroll rects
             Rect TextBox = new Rect(
                 RectView.x + RectView.height,
@@ -45,7 +47,7 @@ namespace BlockdudesTabs
             {
                 //Verse.Sound.SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 SearchString = "";
-                UpdateFunction();
+                update = true;
             }
 
             // need to give the textbox a name inorder to do the loose focus thing below
@@ -63,7 +65,9 @@ namespace BlockdudesTabs
 
             // only filter if focused and the user presses a keyboard key are typing
             if (Focused && Event.current.isKey)
-                UpdateFunction();
+                update = true;
+
+            return update;
         }
 
         public static void CreateMargins(ref Rect RectMain, float OutMargin, float InMargin, bool Outline = true)
