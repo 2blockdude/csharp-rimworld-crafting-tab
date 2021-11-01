@@ -70,39 +70,9 @@ namespace BlockdudesTabs
         {
             if (RectMain == null) return;
 
-            Rect RectMargin = new Rect(RectMain);
-            RectMargin.x += OutMargin;
-            RectMargin.y += OutMargin;
-            RectMargin.width -= OutMargin * 2f;
-            RectMargin.height -= OutMargin * 2f;
-
-            RectMain.x = RectMargin.x + InMargin;
-            RectMain.y = RectMargin.y + InMargin;
-            RectMain.width = RectMargin.width - InMargin * 2f;
-            RectMain.height = RectMargin.height - InMargin * 2f;
-
-            if (Outline)
-                Widgets.DrawBox(RectMargin);
-        }
-
-        public static Rect NewRectWithMargins(float X, float Y, float Width, float Height, float OutMargin, float InMargin, bool Outline = true)
-        {
-            Rect RectMargin = new Rect(
-                X + OutMargin,
-                Y + OutMargin,
-                Width - OutMargin * 2f,
-                Height - OutMargin * 2f);
-
-            Rect RectNew = new Rect(
-                RectMargin.x + InMargin,
-                RectMargin.y + InMargin,
-                RectMargin.width - InMargin * 2f,
-                RectMargin.height - InMargin * 2f);
-
-            if (Outline)
-                Widgets.DrawBox(RectMargin);
-
-            return RectNew;
+            RectMain = RectMain.ContractedBy(OutMargin);
+            if (Outline) Widgets.DrawBox(RectMain);
+            RectMain = RectMain.ContractedBy(InMargin);
         }
     }
 }

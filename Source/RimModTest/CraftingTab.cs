@@ -31,9 +31,9 @@ namespace BlockdudesTabs
         // Lists
         public static List<ModMetaData> ModsList = DefDatabase<RecipeDef>.AllDefsListForReading.Where(def => def.ProducedThingDef != null).Select(def => def.modContentPack.ModMetaData).Distinct().ToList();
         public static List<ThingCategoryDef> CategoryList = DefDatabase<RecipeDef>.AllDefsListForReading.Where(def => def.ProducedThingDef != null).Select(def => def.ProducedThingDef.FirstThingCategory).Distinct().ToList();
-        public static List<RecipeDef> RecipesList = DefDatabase<RecipeDef>.AllDefsListForReading;
         public static List<RecipeDef> CraftablesList = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).ToList();
 
+        public List<ThingCategoryDef> CategoryFilteredList = CategoryList;
         public List<RecipeDef> CraftablesFilteredList = CraftablesList;
 
         // selected things to use in filter
@@ -48,8 +48,7 @@ namespace BlockdudesTabs
             base.resizeable = false;
             _instance = this;
 
-            // gives me the tab size after margin
-            TabSize = new Vector2(windowRect.width - Margin * 2f, windowRect.height - Margin * 2f);
+            // init lists note: need to find a better way to generate lists
             ModsList.Insert(0, null);
             CategoryList.Insert(0, null);
         }
@@ -61,7 +60,7 @@ namespace BlockdudesTabs
             Text.Font = GameFont.Small;
 
             DrawScrollTab(ModsList);
-            DrawScrollTab(CategoryList);
+            DrawScrollTab(CategoryFilteredList);
             DrawScrollTab(CraftablesFilteredList);
             DrawSearchBar();
             DrawItemDescription();
@@ -148,6 +147,7 @@ namespace BlockdudesTabs
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 SelectedMod = Item;
                 FilterCraftables();
+                FilterCategories();
             }
         }
 
@@ -220,7 +220,7 @@ namespace BlockdudesTabs
                     200f,
                     20f);
 
-                Rect RectDescption = new Rect(
+                Rect RectDescription = new Rect(
                     RectOut.x,
                     RectOut.y + (RectOut.height / 3f),
                     RectOut.width / 3f,
@@ -250,7 +250,7 @@ namespace BlockdudesTabs
                     100f,
                     30f);
 
-                TabUI.CreateMargins(ref RectDescption, 0f, 5f, true);
+                TabUI.CreateMargins(ref RectDescription, 0f, 5f, true);
                 TabUI.CreateMargins(ref RectRecipe, 0f, 5f, true);
                 TabUI.CreateMargins(ref RectWorkBenches, 0f, 5f, true);
                 TabUI.CreateMargins(ref RectInfo, 0f, 2f, false);
@@ -262,11 +262,19 @@ namespace BlockdudesTabs
                 Widgets.Label(ModLabel, "Mod Source: " + SelectedThingDef.modContentPack.ModMetaData.Name);
                 Text.Font = GameFont.Small;
 
-                Widgets.LabelScrollable(RectDescption, SelectedThingDef.ProducedThingDef.description, ref _scrollPositionDescription);
-                TabUI.DrawScrollTab(DrawRecipeButtons, SelectedThingDef.ingredients, ref _scrollPositionRecipe, RectRecipe, ButtonHeight: 45f);
+                Widgets.LabelScrollable(RectDescription, SelectedThingDef.ProducedThingDef.description, ref _scrollPositionDescription);
+                TabUI.DrawScrollTab(DrawRecipeButtons, SelectedThingDef.ingredients, ref _scrollPositionRecipe, RectRecipe, ButtonHeight: 23f);
                 TabUI.DrawScrollTab(DrawWorkBenchesButtons, SelectedThingDef.AllRecipeUsers.Distinct().ToList(), ref _scrollPositionWorkBenches, RectWorkBenches);
-                Widgets.ButtonImage(RectInfo, TexButton.Info, Color.white, Color.white * GenUI.SubtleMouseoverColor, true);
-                Widgets.ButtonText(RectCraft, "Craft");
+
+                if (Widgets.ButtonImage(RectInfo, TexButton.Info, Color.white, Color.white * GenUI.SubtleMouseoverColor, true))
+                    new Dialog_InfoCard.Hyperlink(SelectedThingDef.ProducedThingDef, -1).ActivateHyperlink();
+
+                if (Widgets.ButtonText(RectCraft, "Craft"))
+                {
+                    Dialog_BillConfig s = new Dialog_BillConfig(new Bill_Production(SelectedThingDef), new IntVec3());
+                    Find.WindowStack.Add(s);
+                }
+
             }
         }
 
@@ -290,9 +298,15 @@ namespace BlockdudesTabs
                 CraftablesFilteredList = CraftablesFilteredList.Where(def => def.ProducedThingDef.label.IndexOf(SearchString, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
         }
 
-        private List<RecipeDef> FindRecipe(ThingDef thing)
+        private void FilterCategories()
         {
-            return RecipesList.Where(def => def.products.Select(defCount => defCount.thingDef).Contains(thing)).ToList();
+            CategoryFilteredList = CategoryList;
+
+            if (SelectedMod != null)
+            {
+                CategoryFilteredList = CategoryFilteredList.Where(def => def != null && def.childThingDefs.Select(thingdef => thingdef.modContentPack.ModMetaData).Contains(SelectedMod)).ToList();
+                CategoryFilteredList.Insert(0, null);
+            }
         }
     }
 }
