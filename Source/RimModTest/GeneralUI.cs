@@ -14,38 +14,39 @@ namespace BlockdudesTabs
         private static Dialog_BillConfig billConfig = null;
         private static bool canCraft = false;
 
-        public static void DrawScrollTab<T>(Rect rectOut, Action<T, Rect> draw, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f)
-        {
-            Rect rectView = new Rect(0f, 0f, rectOut.width - 16f, list.Count * buttonHeight);
-            Widgets.BeginScrollView(rectOut, ref scrollPosition, rectView);
-
-            // expected custom function for drawing buttons
-            for (int i = 0; i < list.Count; i++)
-                draw(list[i], new Rect(0f, i * buttonHeight, rectView.width, buttonHeight));
-
-            Widgets.EndScrollView();
-        }
-        //public static T DrawScrollTab<T>(Rect rectOut, Action<T, Rect> decorateButton, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f, bool doMouseoverSound = false)
+        //public static void DrawScrollTab<T>(Rect rectOut, Action<T, Rect> draw, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f)
         //{
-        //    T selectedItem = default(T);
-
         //    Rect rectView = new Rect(0f, 0f, rectOut.width - 16f, list.Count * buttonHeight);
         //    Widgets.BeginScrollView(rectOut, ref scrollPosition, rectView);
 
         //    // expected custom function for drawing buttons
         //    for (int i = 0; i < list.Count; i++)
-        //    {
-        //        Rect rectButt = new Rect(0f, i * buttonHeight, rectView.width, buttonHeight);
-        //        decorateButton(list[i], rectButt);
-        //        if (Widgets.ButtonText(rectButt, "", false, doMouseoverSound))
-        //            selectedItem = list[i];
-        //    }
+        //        draw(list[i], new Rect(0f, i * buttonHeight, rectView.width, buttonHeight));
 
         //    Widgets.EndScrollView();
-
-        //    // will return item from list if button has been clicked
-        //    return selectedItem;
         //}
+
+        public static int DrawScrollTab<T>(Rect rectOut, Action<T, Rect> decorateButton, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f, bool doMouseoverSound = false)
+        {
+            int selectedItem = -1;
+
+            Rect rectView = new Rect(0f, 0f, rectOut.width - 16f, list.Count * buttonHeight);
+            Widgets.BeginScrollView(rectOut, ref scrollPosition, rectView);
+
+            // expected custom function for drawing buttons
+            for (int i = 0; i < list.Count; i++)
+            {
+                Rect rectButt = new Rect(0f, i * buttonHeight, rectView.width, buttonHeight);
+                decorateButton(list[i], rectButt);
+                if (Widgets.ButtonText(rectButt, "", false, doMouseoverSound))
+                    selectedItem = i;
+            }
+
+            Widgets.EndScrollView();
+
+            // will return item from list if button has been clicked
+            return selectedItem;
+        }
 
         public static bool DrawSearchBar(Rect rectView, ref string searchString)
         {

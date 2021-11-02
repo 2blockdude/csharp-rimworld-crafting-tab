@@ -98,7 +98,14 @@ namespace BlockdudesTabs
             Widgets.DrawBox(rectTab.ContractedBy(outMargin));
             rectTab = rectTab.ContractedBy(outMargin + inMargin);
 
-            GeneralUI.DrawScrollTab(rectTab, DrawModButtons, modsList, ref _scrollPositionModTab);
+            int selected = GeneralUI.DrawScrollTab(rectTab, DrawModButtons, modsList, ref _scrollPositionModTab);
+            if (selected > -1)
+            {
+                SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                selectedMod = modsList[selected];
+                craftablesFilteredList = FilterRecipeDefs(craftablesList, selectedMod, selectedCategory, searchString);
+                categoryFilteredList = FilterThingCategoryDefs(categoryList, selectedMod);
+            }
         }
 
         private void DrawCategoriesTab()
@@ -112,7 +119,13 @@ namespace BlockdudesTabs
             Widgets.DrawBox(rectTab.ContractedBy(outMargin));
             rectTab = rectTab.ContractedBy(outMargin + inMargin);
 
-            GeneralUI.DrawScrollTab(rectTab, DrawCategoryButtons, categoryFilteredList, ref _scrollPositionCategoryTab);
+            int selected = GeneralUI.DrawScrollTab(rectTab, DrawCategoryButtons, categoryFilteredList, ref _scrollPositionCategoryTab);
+            if (selected > -1)
+            {
+                SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                selectedCategory = categoryFilteredList[selected];
+                craftablesFilteredList = FilterRecipeDefs(craftablesList, selectedMod, selectedCategory, searchString);
+            }
         }
 
         private void DrawCraftablesTab()
@@ -126,7 +139,12 @@ namespace BlockdudesTabs
             Widgets.DrawBox(rectTab.ContractedBy(outMargin));
             rectTab = rectTab.ContractedBy(outMargin + inMargin);
 
-            GeneralUI.DrawScrollTab(rectTab, DrawCraftablesButtons, craftablesFilteredList, ref _scrollPositionThingTab);
+            int selected = GeneralUI.DrawScrollTab(rectTab, DrawCraftablesButtons, craftablesFilteredList, ref _scrollPositionThingTab);
+            if (selected > -1)
+            {
+                SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                selectedCraftable = craftablesFilteredList[selected];
+            }
         }
 
         private void DrawItemDescription()
@@ -221,13 +239,7 @@ namespace BlockdudesTabs
             Widgets.DrawHighlightIfMouseover(button);
 
             string buttonTitle = item == null ? "All" : item.Name;
-            if (Widgets.ButtonText(button, buttonTitle, false))
-            {
-                SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                selectedMod = item;
-                craftablesFilteredList = FilterRecipeDefs(craftablesList, selectedMod, selectedCategory, searchString);
-                categoryFilteredList = FilterThingCategoryDefs(categoryList, selectedMod);
-            }
+            Widgets.Label(button, buttonTitle);
         }
 
         private void DrawCategoryButtons(ThingCategoryDef item, Rect button)
@@ -237,12 +249,7 @@ namespace BlockdudesTabs
             Widgets.DrawHighlightIfMouseover(button);
 
             string buttonTitle = item == null ? "All" : item.label;
-            if (Widgets.ButtonText(button, buttonTitle, false))
-            {
-                SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                selectedCategory = item;
-                craftablesFilteredList = FilterRecipeDefs(craftablesList, selectedMod, selectedCategory, searchString);
-            }
+            Widgets.Label(button, buttonTitle);
         }
 
         private void DrawCraftablesButtons(RecipeDef item, Rect button)
@@ -252,11 +259,7 @@ namespace BlockdudesTabs
             Widgets.DrawHighlightIfMouseover(button);
 
             TooltipHandler.TipRegion(button, new TipSignal(item.ProducedThingDef.description));
-            if (Widgets.ButtonText(button, item.ProducedThingDef.label, false))
-            {
-                SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                selectedCraftable = item;
-            }
+            Widgets.Label(button, item.ProducedThingDef.label);
         }
 
         private void DrawWorktableButtons(ThingDef item, Rect button)
@@ -294,10 +297,7 @@ namespace BlockdudesTabs
             List<ThingCategoryDef> filteredList = filterFrom;
 
             if (modFilter != null)
-            {
-                filteredList = filteredList.Where(def => def != null && def.childThingDefs.Select(thingdef => thingdef.modContentPack.ModMetaData).Contains(modFilter)).ToList();
-                filteredList.Insert(0, null);
-            }
+                filteredList = filteredList.Where(def => def == null || def.childThingDefs.Select(thingdef => thingdef.modContentPack.ModMetaData).Contains(modFilter)).ToList();
 
             return filteredList;
         }
