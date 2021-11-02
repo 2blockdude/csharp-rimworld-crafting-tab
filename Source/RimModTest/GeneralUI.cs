@@ -7,9 +7,14 @@ using Verse;
 
 namespace BlockdudesTabs
 {
-    public static class TabUI
+    public static class GeneralUI
     {
-        public static void DrawScrollTab<T>(Action<T, Rect> draw, List<T> list, ref Vector2 scrollPosition, Rect rectOut, float buttonHeight = 30f)
+        // used for crafting button thing. don't know how to do this better yet so i will keep this till further notice
+        private static Bill_Production bill = null;
+        private static Dialog_BillConfig billConfig = null;
+        private static bool canCraft = false;
+
+        public static void DrawScrollTab<T>(Rect rectOut, Action<T, Rect> draw, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f)
         {
             Rect rectView = new Rect(0f, 0f, rectOut.width - 16f, list.Count * buttonHeight);
             Widgets.BeginScrollView(rectOut, ref scrollPosition, rectView);
@@ -20,8 +25,29 @@ namespace BlockdudesTabs
 
             Widgets.EndScrollView();
         }
+        //public static T DrawScrollTab<T>(Rect rectOut, Action<T, Rect> decorateButton, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f, bool doMouseoverSound = false)
+        //{
+        //    T selectedItem = default(T);
 
-        public static bool DrawSearchBar(ref string searchString, Rect rectView)
+        //    Rect rectView = new Rect(0f, 0f, rectOut.width - 16f, list.Count * buttonHeight);
+        //    Widgets.BeginScrollView(rectOut, ref scrollPosition, rectView);
+
+        //    // expected custom function for drawing buttons
+        //    for (int i = 0; i < list.Count; i++)
+        //    {
+        //        Rect rectButt = new Rect(0f, i * buttonHeight, rectView.width, buttonHeight);
+        //        decorateButton(list[i], rectButt);
+        //        if (Widgets.ButtonText(rectButt, "", false, doMouseoverSound))
+        //            selectedItem = list[i];
+        //    }
+
+        //    Widgets.EndScrollView();
+
+        //    // will return item from list if button has been clicked
+        //    return selectedItem;
+        //}
+
+        public static bool DrawSearchBar(Rect rectView, ref string searchString)
         {
             bool update = false;
 
@@ -42,9 +68,8 @@ namespace BlockdudesTabs
                 rectView.height,
                 rectView.height);
 
-            CreateMargins(ref buttonClear, 3f, 0f, false);
             Widgets.DrawTextureFitted(searchIcon, TexButton.Search, 1f);
-            if (Widgets.ButtonImage(buttonClear, TexButton.CloseXSmall, Color.white, Color.white * GenUI.SubtleMouseoverColor, true))
+            if (Widgets.ButtonImage(buttonClear.ContractedBy(3f), TexButton.CloseXSmall, Color.white, Color.white * GenUI.SubtleMouseoverColor, true))
             {
                 //Verse.Sound.SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 searchString = "";
@@ -64,51 +89,38 @@ namespace BlockdudesTabs
             if (Input.GetMouseButtonDown(0) && !Mouse.IsOver(textBox) && focused)
                 GUI.FocusControl(null);
 
-            // only filter if focused and the user presses a keyboard key are typing
+            // only update if focused and the user presses a keyboard key
             if (focused && Event.current.isKey)
                 update = true;
 
+            // gives you info on if the textbox has been updated
             return update;
         }
 
-        private static Bill_Production bill = null;
-        private static Dialog_BillConfig billConfig = null;
-        private static bool canCraft = false;
-        private static List<Building_WorkTable> worktablesOnMap = null;
-
-        public static bool DrawCraftButton(Rect button, RecipeDef recipe, List<Building_WorkTable> workBenches)
+        public static void DrawMakeBillButton(Rect button, RecipeDef recipe, List<Building_WorkTable> workTables)
         {
-            //bill.DoInterface(0f, 0f, 200, _instance.ID);
-            if (Widgets.ButtonText(button, "Craft"))
+            if (Widgets.ButtonText(button, "Make Bill"))
             {
-                worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
-                if (worktablesOnMap.Count > 0)
+                if (workTables.Count > 0)
                 {
+                    Building_WorkTable tempTable = new Building_WorkTable();
                     bill = new Bill_Production(recipe);
-                    billConfig = new Dialog_BillConfig(bill, worktablesOnMap[0].Position);
+                    billConfig = new Dialog_BillConfig(bill, tempTable.Position);
+                    tempTable.billStack.AddBill(bill);
                     Find.WindowStack.Add(billConfig);
+
                     canCraft = true;
                 }
             }
 
+            // only apply bills after billconfig is closed
             if (canCraft && billConfig != null && billConfig.IsOpen == false)
             {
-                foreach (Building_WorkTable thing in worktablesOnMap)
-                    thing.billStack.AddBill(bill.Clone());
+                // give bill to all listed workTables
+                for (int i = 0; i < workTables.Count; i++)
+                    workTables[i].billStack.AddBill(bill.Clone());
                 canCraft = false;
-                return true;
             }
-
-            return false;
-        }
-
-        public static void CreateMargins(ref Rect RectMain, float OutMargin, float InMargin, bool Outline = true)
-        {
-            if (RectMain == null) return;
-
-            RectMain = RectMain.ContractedBy(OutMargin);
-            if (Outline) Widgets.DrawBox(RectMain);
-            RectMain = RectMain.ContractedBy(InMargin);
         }
     }
 }

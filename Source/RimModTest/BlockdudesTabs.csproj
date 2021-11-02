@@ -76,9 +76,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CraftingTab.cs" />
+    <Compile Include="CraftingMenu.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TabUI.cs" />
+    <Compile Include="GeneralUI.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
