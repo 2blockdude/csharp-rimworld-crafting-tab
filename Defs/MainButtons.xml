@@ -4,7 +4,7 @@
 		<defName>CraftingMenu</defName>
 		<label>Crafting</label>
 		<description>Tab For Crafting.</description>
-		<tabWindowClass>BlockdudesTabs.CraftingMenu</tabWindowClass>
+		<tabWindowClass>BlockdudesTabs.MainTabWindow_CraftingMenu</tabWindowClass>
 		<!-- <tabWindowClass>DubsMintMenus.MainTabWindow_MintBillMenu</tabWindowClass> -->
 		<!-- <workerClass>DubsMintMenus.MainButtonWorker_MintBillMenu</workerClass> -->
 		<buttonVisible>true</buttonVisible>
