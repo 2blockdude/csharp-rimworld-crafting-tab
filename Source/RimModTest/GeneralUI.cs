@@ -25,7 +25,7 @@ namespace BlockdudesTabs
             BillComplete
         }
 
-        public static int DrawScrollTab<T>(Rect rectOut, Action<T, Rect> decorateButton, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f, bool doMouseoverSound = false)
+        public static int ScrollMenu<T>(Rect rectOut, Action<T, Rect> decorateButton, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f, bool doMouseoverSound = false)
         {
             int selectedItem = -1;
 
@@ -47,7 +47,7 @@ namespace BlockdudesTabs
             return selectedItem;
         }
 
-        public static bool DrawSearchBar(Rect rectView, ref string searchString)
+        public static bool SearchBar(Rect rectView, ref string searchString)
         {
             bool update = false;
 
@@ -98,7 +98,7 @@ namespace BlockdudesTabs
         }
 
         // not sure if this is stupid or not but i like it here
-        public static (Bill_Production bill, EventCode eventVal) DrawMakeBillButton(Rect button, RecipeDef recipe, ThingDef worktableType, bool doChecking = true)
+        public static (Bill_Production bill, EventCode eventVal) MakeBillButton(Rect button, RecipeDef recipe, ThingDef worktableType, bool doChecking = true)
         {
             if (Widgets.ButtonText(button, "Make Bill"))
             {
@@ -148,6 +148,35 @@ namespace BlockdudesTabs
             }
 
             return (null, EventCode.NoEvent);
+        }
+
+        public static Rect LabelColorAndOutLine(Rect rect, string label, Color color, TextAnchor anchor, float margin = 0f)
+        {
+            // color outline
+            GUI.color = color;
+            Widgets.DrawBox(rect);
+
+            // reset color
+            GUI.color = Color.white;
+
+            // color in rect to what ever this sets the color to
+            Widgets.DrawAltRect(rect);
+
+            rect = rect.ContractedBy(margin);
+
+            Text.Anchor = anchor;
+            Widgets.Label(rect, label);
+
+            // reset anchor
+            Text.Anchor = TextAnchor.UpperLeft;
+
+            // set rect size after label is in
+            rect.height -= 25f;
+            rect.y += 25f;
+
+            Widgets.DrawLineHorizontal(rect.x, rect.y - 5f, rect.width);
+
+            return rect;
         }
     }
 }

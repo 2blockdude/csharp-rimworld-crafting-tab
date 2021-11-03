@@ -73,36 +73,41 @@ namespace BlockdudesTabs
         {
             Rect menuRect = windowRect.ContractedBy(Margin);
             Text.Font = GameFont.Small;
+            GUI.color = Color.white;
 
             DoSearchBox(new Rect(
                 menuRect.width / 2f,
                 0f,
                 menuRect.width / 2f,
-                30f));
+                30f).ContractedBy(outMargin));
 
             DoModsTab(new Rect(
-                menuRect.width / 2f * 0f,
-                menuRect.height / 2f * 0f,
+                0f,
+                0f,
                 menuRect.width / 2f,
-                menuRect.height / 3f));
+                menuRect.height / 3f)
+                .ContractedBy(outMargin));
 
             DoCategoriesTab(new Rect(
-                menuRect.width / 2f * 0f,
-                menuRect.height / 3f * 1f,
+                0f,
+                menuRect.height / 3f,
                 menuRect.width / 2f,
-                menuRect.height / 3f));
+                menuRect.height / 3f)
+                .ContractedBy(outMargin));
 
             DoCraftablesTab(new Rect(
-                menuRect.width / 2f * 1f,
-                menuRect.height / 2f * 0f + 30f,
                 menuRect.width / 2f,
-                menuRect.height / 3f * 2f - 30f));
+                30f,
+                menuRect.width / 2f,
+                menuRect.height / 3f * 2f - 30f)
+                .ContractedBy(outMargin));
 
             DoItemDescription(new Rect(
-                menuRect.width / 3f * 0f,
+                0f,
                 menuRect.height / 3f * 2f,
                 menuRect.width,
-                menuRect.height / 3f));
+                menuRect.height / 3f)
+                .ContractedBy(outMargin));
 
         }
 
@@ -110,8 +115,7 @@ namespace BlockdudesTabs
         // --------------------------
         public void DoSearchBox(Rect rectSearchBox)
         {
-            rectSearchBox = rectSearchBox.ContractedBy(outMargin);
-            if (GeneralUI.DrawSearchBar(rectSearchBox, ref searchString))
+            if (GeneralUI.SearchBar(rectSearchBox, ref searchString))
             {
                 craftablesFilteredList = FilterRecipeDefs(craftablesList, selectedMod, selectedCategory, searchString);
                 categoryFilteredList = FilterThingCategoryDefs(categoryList, selectedMod, craftablesList, searchString, "");
@@ -120,10 +124,9 @@ namespace BlockdudesTabs
 
         public void DoModsTab(Rect rectTab)
         {
-            Widgets.DrawBox(rectTab.ContractedBy(outMargin));
-            rectTab = rectTab.ContractedBy(outMargin + inMargin);
+            rectTab = GeneralUI.LabelColorAndOutLine(rectTab, "Mods", Color.gray, TextAnchor.UpperCenter, inMargin);
 
-            int selected = GeneralUI.DrawScrollTab(rectTab, DecorateModButtons, modsList, ref _scrollPositionModTab);
+            int selected = GeneralUI.ScrollMenu(rectTab, DecorateModButtons, modsList, ref _scrollPositionModTab);
             if (selected > -1)
             {
                 ModContentPack item = modsList[selected];
@@ -136,10 +139,9 @@ namespace BlockdudesTabs
 
         public void DoCategoriesTab(Rect rectTab)
         {
-            Widgets.DrawBox(rectTab.ContractedBy(outMargin));
-            rectTab = rectTab.ContractedBy(outMargin + inMargin);
+            rectTab = GeneralUI.LabelColorAndOutLine(rectTab, "Categories", Color.gray, TextAnchor.UpperCenter, inMargin);
 
-            int selected = GeneralUI.DrawScrollTab(rectTab, DecorateCategoryButtons, categoryFilteredList, ref _scrollPositionCategoryTab);
+            int selected = GeneralUI.ScrollMenu(rectTab, DecorateCategoryButtons, categoryFilteredList, ref _scrollPositionCategoryTab);
             if (selected > -1)
             {
                 ThingCategoryDef item = categoryFilteredList[selected];
@@ -151,10 +153,9 @@ namespace BlockdudesTabs
 
         public void DoCraftablesTab(Rect rectTab)
         {
-            Widgets.DrawBox(rectTab.ContractedBy(outMargin));
-            rectTab = rectTab.ContractedBy(outMargin + inMargin);
+            rectTab = GeneralUI.LabelColorAndOutLine(rectTab, "Items", Color.gray, TextAnchor.UpperCenter, inMargin);
 
-            int selected = GeneralUI.DrawScrollTab(rectTab, DecorateCraftablesButtons, craftablesFilteredList, ref _scrollPositionThingTab);
+            int selected = GeneralUI.ScrollMenu(rectTab, DecorateCraftablesButtons, craftablesFilteredList, ref _scrollPositionThingTab);
             if (selected > -1)
             {
                 RecipeDef item = craftablesFilteredList[selected];
@@ -168,10 +169,14 @@ namespace BlockdudesTabs
 
         public void DoItemDescription(Rect rectTab)
         {
-            if (selectedCraftable == null) return;
+            GUI.color = Color.gray;
+            Widgets.DrawBox(rectTab);
+            GUI.color = Color.white;
+            Widgets.DrawAltRect(rectTab);
 
-            Widgets.DrawBox(rectTab.ContractedBy(outMargin));
-            rectTab = rectTab.ContractedBy(outMargin + inMargin);
+            rectTab = rectTab.ContractedBy(inMargin);
+
+            if (selectedCraftable == null) return;
 
             Rect rectThingLabel = new Rect(
                 rectTab.x,
@@ -179,16 +184,10 @@ namespace BlockdudesTabs
                 200f,
                 30f);
 
-            Rect rectRecipeReqLabel = new Rect(
+            Rect rectModLabel = new Rect(
                 rectThingLabel.x,
                 rectThingLabel.y + rectThingLabel.height,
                 300f,
-                20f);
-
-            Rect rectModLabel = new Rect(
-                rectRecipeReqLabel.x,
-                rectRecipeReqLabel.y + rectRecipeReqLabel.height,
-                200f,
                 20f);
 
             Rect rectDescription = new Rect(
@@ -221,24 +220,20 @@ namespace BlockdudesTabs
                 100f,
                 30f);
 
-            Widgets.DrawBox(rectDescription);
-            Widgets.DrawBox(rectRecipe);
-            Widgets.DrawBox(rectWorktables);
+            rectRecipe = GeneralUI.LabelColorAndOutLine(rectRecipe, "Info", Color.gray, TextAnchor.UpperCenter, inMargin);
+            rectWorktables = GeneralUI.LabelColorAndOutLine(rectWorktables, "Select worktable", Color.gray, TextAnchor.UpperCenter, inMargin);
+            rectDescription = GeneralUI.LabelColorAndOutLine(rectDescription, "Description", Color.gray, TextAnchor.UpperCenter, inMargin);
 
-            rectDescription = rectDescription.ContractedBy(inMargin);
-            rectRecipe = rectRecipe.ContractedBy(inMargin);
-            rectWorktables = rectWorktables.ContractedBy(inMargin);
             rectInfo = rectInfo.ContractedBy(2f);
 
             Text.Font = GameFont.Medium;
             Widgets.Label(rectThingLabel, selectedCraftable.ProducedThingDef.label);
             Text.Font = GameFont.Tiny;
-            Widgets.Label(rectRecipeReqLabel, "Required Research: " + (selectedCraftable.researchPrerequisite == null ? "None" : selectedCraftable.researchPrerequisite.label));
-            Widgets.Label(rectModLabel, "Mod Source: " + selectedCraftable.modContentPack.ModMetaData.Name);
+            Widgets.Label(rectModLabel, "Source: " + selectedCraftable.modContentPack.ModMetaData.Name);
             Text.Font = GameFont.Small;
 
             Widgets.LabelScrollable(rectDescription, selectedCraftable.ProducedThingDef.description, ref _scrollPositionDescription);
-            GeneralUI.DrawScrollTab(rectRecipe, DecorateRecipeButtons, selectedCraftable.ingredients, ref _scrollPositionRecipe, buttonHeight: 22f);
+            GeneralUI.ScrollMenu(rectRecipe, DecorateRecipeButtons, selectedCraftable.ingredients, ref _scrollPositionRecipe, buttonHeight: 22f);
             Decription_WorktableButtons(rectWorktables);
             Widgets.InfoCardButton(rectInfo, selectedCraftable.ProducedThingDef);
             Description_MakeBillButton(rectCraft, selectedCraftable);
@@ -251,7 +246,7 @@ namespace BlockdudesTabs
         private void Decription_WorktableButtons(Rect rectView)
         {
             List<ThingDef> allowedTables = selectedCraftable.AllRecipeUsers.Distinct().ToList();
-            int selected = GeneralUI.DrawScrollTab(rectView, DecorateWorktableButtons, allowedTables, ref _scrollPositionWorkBenches);
+            int selected = GeneralUI.ScrollMenu(rectView, DecorateWorktableButtons, allowedTables, ref _scrollPositionWorkBenches);
             if (selected > -1)
             {
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
@@ -282,7 +277,7 @@ namespace BlockdudesTabs
 
         private void Description_MakeBillButton(Rect button, RecipeDef recipe)
         {
-            (Bill_Production bill, GeneralUI.EventCode eventVal) buttonState = GeneralUI.DrawMakeBillButton(button, recipe, selectedWorktableType);
+            (Bill_Production bill, GeneralUI.EventCode eventVal) buttonState = GeneralUI.MakeBillButton(button, recipe, selectedWorktableType);
 
             Bill_Production bill = buttonState.bill;
             GeneralUI.EventCode eventVal = buttonState.eventVal;
@@ -327,7 +322,7 @@ namespace BlockdudesTabs
         // -----------------------------------
         // end of description helper functions
 
-        // Start of button decoration
+        // Start of button decorations for scroll view
         // --------------------------
         private void DecorateModButtons(ModContentPack item, Rect button)
         {
