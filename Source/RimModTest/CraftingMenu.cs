@@ -12,7 +12,6 @@ namespace BlockdudesTabs
     public class CraftingMenu : MainTabWindow
     {
         // Tab Settings
-        public static MainTabWindow _instance { get; private set; }
         public override Vector2 RequestedTabSize => new Vector2(700f, 700f);
         public override MainTabWindowAnchor Anchor => MainTabWindowAnchor.Left;
         protected override float Margin => 5f;
@@ -21,7 +20,7 @@ namespace BlockdudesTabs
         public static float inMargin = 5f;
 
         // true tab size after margins
-        public Vector2 tabSize;
+        public Rect menuRect = Rect.zero;
 
         // keeps track of scroll
         internal static Vector2 _scrollPositionCategoryTab = Vector2.zero;
@@ -32,12 +31,12 @@ namespace BlockdudesTabs
         internal static Vector2 _scrollPositionWorkBenches = Vector2.zero;
 
         // Lists
-        public static List<ModMetaData> modsList = DefDatabase<RecipeDef>.AllDefsListForReading.Where(def => def.ProducedThingDef != null).Select(def => def.modContentPack.ModMetaData).Distinct().ToList();
-        public static List<ThingCategoryDef> categoryList = DefDatabase<RecipeDef>.AllDefsListForReading.Where(def => def.ProducedThingDef != null).Select(def => def.ProducedThingDef.FirstThingCategory).Distinct().ToList();
-        public static List<RecipeDef> craftablesList = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).ToList();
+        public static List<ModMetaData> modsList = null;
+        public static List<ThingCategoryDef> categoryList = null;
+        public static List<RecipeDef> craftablesList = null;
 
-        public List<ThingCategoryDef> categoryFilteredList = categoryList;
-        public List<RecipeDef> craftablesFilteredList = craftablesList;
+        public List<ThingCategoryDef> categoryFilteredList = null;
+        public List<RecipeDef> craftablesFilteredList = null;
 
         // selected things to use in filter
         public ThingCategoryDef selectedCategory = null;
@@ -52,17 +51,25 @@ namespace BlockdudesTabs
         {
             base.draggable = false;
             base.resizeable = false;
-            _instance = this;
 
-            // init lists note: find a better way to include null
+            // generate lists
+            modsList = new List<ModMetaData>();
             modsList.Insert(0, null);
+            modsList.InsertRange(1, DefDatabase<RecipeDef>.AllDefsListForReading.Where(def => def.ProducedThingDef != null).Select(def => def.modContentPack.ModMetaData).Distinct());
+
+            categoryList = new List<ThingCategoryDef>();
             categoryList.Insert(0, null);
+            categoryList.InsertRange(1, DefDatabase<RecipeDef>.AllDefsListForReading.Where(def => def.ProducedThingDef != null).Select(def => def.ProducedThingDef.FirstThingCategory).Distinct());
+
+            craftablesList = DefDatabase<RecipeDef>.AllDefs.Where(def => def.ProducedThingDef != null).ToList();
+
+            categoryFilteredList = categoryList;
+            craftablesFilteredList = craftablesList;
         }
 
         public override void DoWindowContents(Rect inRect)
         {
-            tabSize.x = windowRect.width - Margin * 2f;
-            tabSize.y = windowRect.height - Margin * 2f;
+            menuRect = windowRect.ContractedBy(Margin);
             Text.Font = GameFont.Small;
 
             DrawSearchBar();
@@ -75,25 +82,28 @@ namespace BlockdudesTabs
         private void DrawSearchBar()
         {
             Rect searchBox = new Rect(
-                tabSize.x / 2f,
+                menuRect.width / 2f,
                 0f,
-                tabSize.x / 2f,
+                menuRect.width / 2f,
                 30f);
 
             searchBox = searchBox.ContractedBy(outMargin);
 
             if (GeneralUI.DrawSearchBar(searchBox, ref searchString))
+            {
                 craftablesFilteredList = FilterRecipeDefs(craftablesList, selectedMod, selectedCategory, searchString);
+                categoryFilteredList = FilterThingCategoryDefs(categoryList, selectedMod, craftablesList, searchString, "");
+            }
         }
 
         private void DrawModsTab()
         {
             // top third left
             Rect rectTab = new Rect(
-                tabSize.x / 2f * 0f,            // posx
-                tabSize.y / 2f * 0f,            // posy
-                tabSize.x / 2f,                 // sizex
-                tabSize.y / 3f);                // sizey
+                menuRect.width / 2f * 0f,            // posx
+                menuRect.height / 2f * 0f,            // posy
+                menuRect.width / 2f,                 // sizex
+                menuRect.height / 3f);                // sizey
 
             Widgets.DrawBox(rectTab.ContractedBy(outMargin));
             rectTab = rectTab.ContractedBy(outMargin + inMargin);
@@ -101,20 +111,21 @@ namespace BlockdudesTabs
             int selected = GeneralUI.DrawScrollTab(rectTab, DrawModButtons, modsList, ref _scrollPositionModTab);
             if (selected > -1)
             {
+                ModMetaData item = modsList[selected];
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                selectedMod = modsList[selected];
+                selectedMod = item;
                 craftablesFilteredList = FilterRecipeDefs(craftablesList, selectedMod, selectedCategory, searchString);
-                categoryFilteredList = FilterThingCategoryDefs(categoryList, selectedMod);
+                categoryFilteredList = FilterThingCategoryDefs(categoryList, selectedMod, craftablesList, searchString, "");
             }
         }
 
         private void DrawCategoriesTab()
         {
             Rect rectTab = new Rect(
-                tabSize.x / 2f * 0f,            // posx
-                tabSize.y / 3f * 1f,            // posy
-                tabSize.x / 2f,                 // sizex
-                tabSize.y / 3f);                // sizey
+                menuRect.width / 2f * 0f,            // posx
+                menuRect.height / 3f * 1f,            // posy
+                menuRect.width / 2f,                 // sizex
+                menuRect.height / 3f);                // sizey
 
             Widgets.DrawBox(rectTab.ContractedBy(outMargin));
             rectTab = rectTab.ContractedBy(outMargin + inMargin);
@@ -122,8 +133,9 @@ namespace BlockdudesTabs
             int selected = GeneralUI.DrawScrollTab(rectTab, DrawCategoryButtons, categoryFilteredList, ref _scrollPositionCategoryTab);
             if (selected > -1)
             {
+                ThingCategoryDef item = categoryFilteredList[selected];
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                selectedCategory = categoryFilteredList[selected];
+                selectedCategory = item;
                 craftablesFilteredList = FilterRecipeDefs(craftablesList, selectedMod, selectedCategory, searchString);
             }
         }
@@ -131,10 +143,10 @@ namespace BlockdudesTabs
         private void DrawCraftablesTab()
         {
             Rect rectTab = new Rect(
-                tabSize.x / 2f * 1f,             // posx
-                tabSize.y / 2f * 0f + 30f,       // posy
-                tabSize.x / 2f,                  // sizex
-                tabSize.y / 3f * 2f - 30f);            // sizey
+                menuRect.width / 2f * 1f,             // posx
+                menuRect.height / 2f * 0f + 30f,       // posy
+                menuRect.width / 2f,                  // sizex
+                menuRect.height / 3f * 2f - 30f);            // sizey
 
             Widgets.DrawBox(rectTab.ContractedBy(outMargin));
             rectTab = rectTab.ContractedBy(outMargin + inMargin);
@@ -142,18 +154,19 @@ namespace BlockdudesTabs
             int selected = GeneralUI.DrawScrollTab(rectTab, DrawCraftablesButtons, craftablesFilteredList, ref _scrollPositionThingTab);
             if (selected > -1)
             {
+                RecipeDef item = craftablesFilteredList[selected];
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                selectedCraftable = craftablesFilteredList[selected];
+                selectedCraftable = item;
             }
         }
 
         private void DrawItemDescription()
         {
             Rect rectGroup = new Rect(
-                tabSize.x / 3f * 0f,
-                tabSize.y / 3f * 2f,
-                tabSize.x,
-                tabSize.y / 3f);
+                menuRect.width / 3f * 0f,
+                menuRect.height / 3f * 2f,
+                menuRect.width,
+                menuRect.height / 3f);
 
             if (selectedCraftable == null) return;
 
@@ -226,10 +239,64 @@ namespace BlockdudesTabs
 
             Widgets.LabelScrollable(rectDescription, selectedCraftable.ProducedThingDef.description, ref _scrollPositionDescription);
             GeneralUI.DrawScrollTab(rectRecipe, DrawRecipeButtons, selectedCraftable.ingredients, ref _scrollPositionRecipe, buttonHeight: 22f);
-            GeneralUI.DrawScrollTab(rectWorktables, DrawWorktableButtons, selectedCraftable.AllRecipeUsers.Distinct().ToList(), ref _scrollPositionWorkBenches);
+            WorktableButtons(rectWorktables);
             Widgets.InfoCardButton(rectInfo, selectedCraftable.ProducedThingDef);
-            List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
-            GeneralUI.DrawMakeBillButton(rectCraft, selectedCraftable, worktablesOnMap);
+            MakeBillButton(rectCraft, selectedCraftable);
+        }
+
+        private void WorktableButtons(Rect rectView)
+        {
+            List<ThingDef> allowedTables = selectedCraftable.AllRecipeUsers.Distinct().ToList();
+            int selected = GeneralUI.DrawScrollTab(rectView, DrawWorktableButtons, allowedTables, ref _scrollPositionWorkBenches);
+            if (selected > -1)
+            {
+                SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+                selectedWorktableType = allowedTables[selected];
+                List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
+                worktablesOnMap = worktablesOnMap.Where(def => def.def == selectedWorktableType).ToList();
+            }
+        }
+
+        private void MakeBillButton(Rect button, RecipeDef recipe)
+        {
+            Bill_Production bill;
+
+            // check if recipe is compatible with selected worktable
+            if (selectedWorktableType == null || !recipe.AllRecipeUsers.Contains(selectedWorktableType))
+            {
+                // i still want the button to be drawn
+                bill = GeneralUI.DrawMakeBillButton(button, null);
+                return;
+            }
+
+            // check if research for item is done
+            if (!recipe.researchPrerequisite.IsFinished && !recipe.researchPrerequisite.PrerequisitesCompleted)
+            {
+                // button still drawn
+                bill = GeneralUI.DrawMakeBillButton(button, null);
+                return;
+            }
+
+            bill = GeneralUI.DrawMakeBillButton(button, recipe);
+
+            if (bill != null)
+            {
+                // decide if the bill should go to all worktables or just one
+                if (selectedWorktable != null)
+                {
+                    selectedWorktable.BillStack.AddBill(bill.Clone());
+                }
+                else if (selectedWorktableType != null)
+                {
+                    // find and filter worktables on map
+                    List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
+                    worktablesOnMap = worktablesOnMap.Where(def => def.def == selectedWorktableType).ToList();
+
+                    // add bill to each worktable on current map
+                    foreach (Building_WorkTable table in worktablesOnMap)
+                        table.BillStack.AddBill(bill.Clone());
+                }
+            }
         }
 
         private void DrawModButtons(ModMetaData item, Rect button)
@@ -264,6 +331,8 @@ namespace BlockdudesTabs
 
         private void DrawWorktableButtons(ThingDef item, Rect button)
         {
+            if (selectedWorktableType == item) Widgets.DrawHighlight(button);
+            Widgets.DrawHighlightIfMouseover(button);
             Widgets.Label(button, item.label);
         }
 
@@ -273,9 +342,9 @@ namespace BlockdudesTabs
         }
 
 
-        private List<RecipeDef> FilterRecipeDefs(List<RecipeDef> filterFrom, ModMetaData modFilter, ThingCategoryDef categoryFilter, string labelFilter)
+        private List<RecipeDef> FilterRecipeDefs(List<RecipeDef> filterFromRecipes, ModMetaData modFilter, ThingCategoryDef categoryFilter, string labelFilter)
         {
-            List<RecipeDef> filteredList = filterFrom;
+            List<RecipeDef> filteredList = filterFromRecipes;
 
             // filter mod
             if (modFilter != null)
@@ -283,7 +352,7 @@ namespace BlockdudesTabs
 
             // filter category
             if (categoryFilter != null)
-                filteredList = filteredList.Where(def => def.ProducedThingDef.FirstThingCategory == categoryFilter).ToList();
+                filteredList = filteredList.Where(def => categoryFilter.childThingDefs.Any(thingdef => def.ProducedThingDef == thingdef)).ToList();
 
             // filter search
             if (labelFilter != "")
@@ -292,12 +361,43 @@ namespace BlockdudesTabs
             return filteredList;
         }
 
-        private List<ThingCategoryDef> FilterThingCategoryDefs(List<ThingCategoryDef> filterFrom, ModMetaData modFilter, string labelFilter = "")
+        private List<ThingCategoryDef> FilterThingCategoryDefs(List<ThingCategoryDef> filterFromCategories, ModMetaData modFilter, List<RecipeDef> whiteList, string thingDefSearch, string categoryDefSearch)
         {
-            List<ThingCategoryDef> filteredList = filterFrom;
+            List<ThingCategoryDef> filteredList = filterFromCategories;
 
+            // keep categories with label that include string
+            if (categoryDefSearch != "")
+            {
+                filteredList = filteredList.Where(def => def == null || def.label.IndexOf(categoryDefSearch, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+            }
+
+            // keep categories with thingdefs that include string
+            if (thingDefSearch != "")
+            {
+                filteredList = filteredList.Where(def => def == null || def.childThingDefs.Any(thingdef => thingdef.label.IndexOf(thingDefSearch, StringComparison.OrdinalIgnoreCase) >= 0)).ToList();
+            }
+
+            // keep categories with thingdefs that are from mod
             if (modFilter != null)
+            {
                 filteredList = filteredList.Where(def => def == null || def.childThingDefs.Select(thingdef => thingdef.modContentPack.ModMetaData).Contains(modFilter)).ToList();
+            }
+
+            // note: I put at bottom because I believe it takes longer than the others and I don't know how to optimize
+            // remove any categories that don't have an item within the whitelist
+            if (whiteList != null)
+            {
+                if (modFilter != null)
+                    whiteList = whiteList.Where(def => def.modContentPack.ModMetaData == modFilter).ToList();
+
+                if (thingDefSearch != null)
+                    whiteList = whiteList.Where(def => def.ProducedThingDef.label.IndexOf(thingDefSearch, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+
+                filteredList = whiteList.Select(def => def.ProducedThingDef.FirstThingCategory).Distinct().Intersect(filteredList).ToList();
+
+                if (filteredList.Count > 1)
+                    filteredList.Insert(0, null);
+            }
 
             return filteredList;
         }

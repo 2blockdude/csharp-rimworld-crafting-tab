@@ -14,7 +14,7 @@ namespace BlockdudesTabs
         private static Dialog_BillConfig billConfig = null;
         private static bool canCraft = false;
 
-        //public static void DrawScrollTab<T>(Rect rectOut, Action<T, Rect> draw, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f)
+        //public static int DrawScrollTab<T>(Rect rectOut, Action<T, Rect> draw, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f)
         //{
         //    Rect rectView = new Rect(0f, 0f, rectOut.width - 16f, list.Count * buttonHeight);
         //    Widgets.BeginScrollView(rectOut, ref scrollPosition, rectView);
@@ -24,6 +24,8 @@ namespace BlockdudesTabs
         //        draw(list[i], new Rect(0f, i * buttonHeight, rectView.width, buttonHeight));
 
         //    Widgets.EndScrollView();
+
+        //    return 1;
         //}
 
         public static int DrawScrollTab<T>(Rect rectOut, Action<T, Rect> decorateButton, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f, bool doMouseoverSound = false)
@@ -98,30 +100,31 @@ namespace BlockdudesTabs
             return update;
         }
 
-        public static void DrawMakeBillButton(Rect button, RecipeDef recipe, List<Building_WorkTable> workTables)
+        public static Bill_Production DrawMakeBillButton(Rect button, RecipeDef recipe)
         {
             if (Widgets.ButtonText(button, "Make Bill"))
             {
-                if (workTables.Count > 0)
-                {
-                    Building_WorkTable tempTable = new Building_WorkTable();
-                    bill = new Bill_Production(recipe);
-                    billConfig = new Dialog_BillConfig(bill, tempTable.Position);
-                    tempTable.billStack.AddBill(bill);
-                    Find.WindowStack.Add(billConfig);
+                // return if recipe is null but still draw the button
+                if (recipe == null)
+                    return null;
 
-                    canCraft = true;
-                }
+                Building_WorkTable tempTable = new Building_WorkTable();
+                bill = new Bill_Production(recipe);
+                billConfig = new Dialog_BillConfig(bill, tempTable.Position);
+                tempTable.billStack.AddBill(bill);
+                Find.WindowStack.Add(billConfig);
+
+                canCraft = true;
             }
 
-            // only apply bills after billconfig is closed
-            if (canCraft && billConfig != null && billConfig.IsOpen == false)
+            // only returns bills after billconfig is closed
+            if (recipe != null && canCraft && billConfig != null && billConfig.IsOpen == false)
             {
-                // give bill to all listed workTables
-                for (int i = 0; i < workTables.Count; i++)
-                    workTables[i].billStack.AddBill(bill.Clone());
                 canCraft = false;
+                return bill;
             }
+
+            return null;
         }
     }
 }
