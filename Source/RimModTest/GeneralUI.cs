@@ -97,6 +97,7 @@ namespace BlockdudesTabs
             return update;
         }
 
+        // not sure if this is stupid or not but i like it here
         public static (Bill_Production bill, EventCode eventVal) DrawMakeBillButton(Rect button, RecipeDef recipe, ThingDef worktableType, bool doChecking = true)
         {
             if (Widgets.ButtonText(button, "Make Bill"))
