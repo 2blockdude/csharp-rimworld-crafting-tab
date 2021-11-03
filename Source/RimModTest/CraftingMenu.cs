@@ -71,6 +71,7 @@ namespace BlockdudesTabs
         {
             menuRect = windowRect.ContractedBy(Margin);
             Text.Font = GameFont.Small;
+            GUI.color = Color.white;
 
             DrawSearchBar();
             DrawModsTab();
@@ -252,8 +253,10 @@ namespace BlockdudesTabs
             {
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 selectedWorktableType = allowedTables[selected];
+
                 List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
                 worktablesOnMap = worktablesOnMap.Where(def => def.def == selectedWorktableType).ToList();
+                worktablesOnMap.Insert(0, null);
             }
         }
 
@@ -269,8 +272,8 @@ namespace BlockdudesTabs
                 return;
             }
 
-            // check if research for item is done
-            if (!recipe.researchPrerequisite.IsFinished && !recipe.researchPrerequisite.PrerequisitesCompleted)
+            // check if research for item is done. note: don't need to check if worktable research is finished
+            if (recipe.researchPrerequisite != null && !(recipe.researchPrerequisite.IsFinished && recipe.researchPrerequisite.PrerequisitesCompleted))
             {
                 // button still drawn
                 bill = GeneralUI.DrawMakeBillButton(button, null);
