@@ -227,9 +227,9 @@ namespace BlockdudesTabs
             rectInfo = rectInfo.ContractedBy(2f);
 
             Text.Font = GameFont.Medium;
-            Widgets.Label(rectThingLabel, selectedCraftable.ProducedThingDef.label);
+            Widgets.Label(rectThingLabel, selectedCraftable.ProducedThingDef.label.CapitalizeFirst());
             Text.Font = GameFont.Tiny;
-            Widgets.Label(rectModLabel, "Source: " + selectedCraftable.modContentPack.ModMetaData.Name);
+            Widgets.Label(rectModLabel, "Source: " + selectedCraftable.modContentPack.Name);
             Text.Font = GameFont.Small;
 
             Widgets.LabelScrollable(rectDescription, selectedCraftable.ProducedThingDef.description, ref _scrollPositionDescription);
@@ -245,12 +245,12 @@ namespace BlockdudesTabs
         // -------------------------------------
         private void Decription_WorktableButtons(Rect rectView)
         {
-            List<ThingDef> allowedTables = selectedCraftable.AllRecipeUsers.Distinct().ToList();
-            int selected = GeneralUI.ScrollMenu(rectView, DecorateWorktableButtons, allowedTables, ref _scrollPositionWorkBenches);
+            List<ThingDef> tableDefs = selectedCraftable.AllRecipeUsers.Distinct().ToList();
+            int selected = GeneralUI.ScrollMenu(rectView, DecorateWorktableButtons, tableDefs, ref _scrollPositionWorkBenches);
             if (selected > -1)
             {
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-                selectedWorktableType = allowedTables[selected];
+                selectedWorktableType = tableDefs[selected];
 
                 // only show float menu if button is right clicked
                 if (Input.GetMouseButtonUp(1))
@@ -259,6 +259,7 @@ namespace BlockdudesTabs
                     worktablesOnMap = worktablesOnMap.Where(def => def.def == selectedWorktableType).ToList();
 
                     List<FloatMenuOption> options = new List<FloatMenuOption>();
+                    int i = 1;
                     foreach (Building_WorkTable table in worktablesOnMap)
                     {
                         Action action = delegate ()
@@ -266,11 +267,18 @@ namespace BlockdudesTabs
                             selectedWorktable = table;
                             CameraJumper.TryJumpAndSelect(table);
                         };
-                        options.Add(new FloatMenuOption(table.Label, action));
+                        options.Add(new FloatMenuOption(table.Label + " " + $"{i}", action));
+                        i++;
                     }
 
                     if (options.Count != 0)
+                    {
                         Find.WindowStack.Add(new FloatMenu(options));
+                    }
+                    else
+                    {
+                        Messages.Message("Cannot find any worktables of this type.", null, MessageTypeDefOf.CautionInput, null);
+                    }
                 }
             }
         }
@@ -340,8 +348,8 @@ namespace BlockdudesTabs
             if (selectedCategory == item) Widgets.DrawHighlight(button);
             Widgets.DrawHighlightIfMouseover(button);
 
-            string buttonTitle = item == null ? "All" : item.label;
-            Widgets.Label(button, buttonTitle.CapitalizeFirst());
+            string buttonTitle = item == null ? "All" : item.label.CapitalizeFirst();
+            Widgets.Label(button, buttonTitle);
         }
 
         private void DecorateCraftablesButtons(RecipeDef item, Rect button)
@@ -351,14 +359,14 @@ namespace BlockdudesTabs
             Widgets.DrawHighlightIfMouseover(button);
 
             TooltipHandler.TipRegion(button, new TipSignal(item.ProducedThingDef.description));
-            Widgets.Label(button, item.ProducedThingDef.label);
+            Widgets.Label(button, item.ProducedThingDef.label.CapitalizeFirst());
         }
 
         private void DecorateWorktableButtons(ThingDef item, Rect button)
         {
             if (selectedWorktableType == item) Widgets.DrawHighlight(button);
             Widgets.DrawHighlightIfMouseover(button);
-            Widgets.Label(button, item.label);
+            Widgets.Label(button, item.label.CapitalizeFirst());
         }
 
         private void DecorateRecipeButtons(IngredientCount item, Rect button)
