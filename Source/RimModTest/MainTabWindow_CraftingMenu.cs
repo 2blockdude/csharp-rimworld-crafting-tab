@@ -31,7 +31,7 @@ namespace BlockdudesTabs
         internal static Vector2 _scrollPositionWorkBenches = Vector2.zero;
 
         // Lists
-        public static List<ModMetaData> modsList = null;
+        public static List<ModContentPack> modsList = null;
         public static List<ThingCategoryDef> categoryList = null;
         public static List<RecipeDef> craftablesList = null;
 
@@ -40,7 +40,7 @@ namespace BlockdudesTabs
 
         // selected things to use in filter
         public ThingCategoryDef selectedCategory = null;
-        public ModMetaData selectedMod = null;
+        public ModContentPack selectedMod = null;
         public RecipeDef selectedCraftable = null;
         public string searchString = "";
 
@@ -53,16 +53,17 @@ namespace BlockdudesTabs
             base.resizeable = false;
 
             // generate lists
-            modsList = new List<ModMetaData>();
-            modsList.InsertRange(0, DefDatabase<RecipeDef>.AllDefsListForReading.Where(def => def != null && def.ProducedThingDef != null && def.modContentPack != null && def.modContentPack.ModMetaData != null).Select(def => def.modContentPack.ModMetaData).Distinct());
+            craftablesList = DefDatabase<RecipeDef>.AllDefs.Where(def => def != null && def.ProducedThingDef != null).ToList();
+
+            modsList = new List<ModContentPack>();
+            modsList.InsertRange(0, craftablesList.Where(def => def != null && def.ProducedThingDef != null && def.modContentPack != null).Select(def => def.modContentPack).Distinct());
             if (modsList.Count > 1)
                 modsList.Insert(0, null);
 
             categoryList = new List<ThingCategoryDef>();
             categoryList.Insert(0, null);
-            categoryList.InsertRange(1, DefDatabase<RecipeDef>.AllDefsListForReading.Where(def => def != null && def.ProducedThingDef != null && def.ProducedThingDef.FirstThingCategory != null).Select(def => def.ProducedThingDef.FirstThingCategory).Distinct());
+            categoryList.InsertRange(1, craftablesList.Where(def => def != null && def.ProducedThingDef != null && def.ProducedThingDef.FirstThingCategory != null).Select(def => def.ProducedThingDef.FirstThingCategory).Distinct());
 
-            craftablesList = DefDatabase<RecipeDef>.AllDefs.Where(def => def != null && def.ProducedThingDef != null).ToList();
 
             categoryFilteredList = categoryList;
             craftablesFilteredList = craftablesList;
@@ -113,7 +114,7 @@ namespace BlockdudesTabs
             int selected = GeneralUI.DrawScrollTab(rectTab, DrawModButtons, modsList, ref _scrollPositionModTab);
             if (selected > -1)
             {
-                ModMetaData item = modsList[selected];
+                ModContentPack item = modsList[selected];
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 selectedMod = item;
                 craftablesFilteredList = FilterRecipeDefs(craftablesList, selectedMod, selectedCategory, searchString);
@@ -320,7 +321,7 @@ namespace BlockdudesTabs
             }
         }
 
-        private void DrawModButtons(ModMetaData item, Rect button)
+        private void DrawModButtons(ModContentPack item, Rect button)
         {
             // draw and decorate button
             if (selectedMod == item) Widgets.DrawHighlight(button);
@@ -363,13 +364,9 @@ namespace BlockdudesTabs
         }
 
 
-        private List<RecipeDef> FilterRecipeDefs(List<RecipeDef> filterFromRecipes, ModMetaData modFilter, ThingCategoryDef categoryFilter, string labelFilter)
+        private List<RecipeDef> FilterRecipeDefs(List<RecipeDef> filterFromRecipes, ModContentPack modFilter, ThingCategoryDef categoryFilter, string labelFilter)
         {
             List<RecipeDef> filteredList = filterFromRecipes;
-
-            // filter mod
-            if (modFilter != null)
-                filteredList = filteredList.Where(def => def != null && def.modContentPack != null && def.modContentPack.ModMetaData != null && def.modContentPack.ModMetaData == modFilter).ToList();
 
             // filter category
             if (categoryFilter != null)
@@ -379,10 +376,14 @@ namespace BlockdudesTabs
             if (labelFilter != "")
                 filteredList = filteredList.Where(def => def != null && def.ProducedThingDef != null && def.ProducedThingDef.label.IndexOf(labelFilter, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
 
+            // filter mod
+            if (modFilter != null)
+                filteredList = filteredList.Where(def => def != null && def.modContentPack != null && def.modContentPack == modFilter).ToList();
+
             return filteredList;
         }
 
-        private List<ThingCategoryDef> FilterThingCategoryDefs(List<ThingCategoryDef> filterFromCategories, ModMetaData modFilter, List<RecipeDef> whiteList, string thingDefSearch, string categoryDefSearch)
+        private List<ThingCategoryDef> FilterThingCategoryDefs(List<ThingCategoryDef> filterFromCategories, ModContentPack modFilter, List<RecipeDef> whiteList, string thingDefSearch, string categoryDefSearch)
         {
             List<ThingCategoryDef> filteredList = filterFromCategories;
 
@@ -401,7 +402,7 @@ namespace BlockdudesTabs
             // filter categories with thingdefs that are from mod
             if (modFilter != null)
             {
-                filteredList = filteredList.Where(def => def != null && def.childThingDefs != null && def.childThingDefs.Where(thingdef => thingdef != null && thingdef.modContentPack != null && thingdef.modContentPack.ModMetaData != null).Select(thingdef => thingdef.modContentPack.ModMetaData).Contains(modFilter)).ToList();
+                filteredList = filteredList.Where(def => def != null && def.childThingDefs != null && def.childThingDefs.Where(thingdef => thingdef != null && thingdef.modContentPack != null).Select(thingdef => thingdef.modContentPack).Contains(modFilter)).ToList();
             }
 
             // note: I put at bottom because I believe it takes longer than the others and I don't know how to optimize
@@ -410,7 +411,7 @@ namespace BlockdudesTabs
             {
                 // filter whitelist to have only selected mod items
                 if (modFilter != null)
-                    whiteList = whiteList.Where(def => def != null && def.modContentPack != null && def.modContentPack.ModMetaData != null && def.modContentPack.ModMetaData == modFilter).ToList();
+                    whiteList = whiteList.Where(def => def != null && def.modContentPack != null && def.modContentPack == modFilter).ToList();
 
                 // filter whitelist to only contain items with thingDefSearch string
                 if (thingDefSearch != null)
