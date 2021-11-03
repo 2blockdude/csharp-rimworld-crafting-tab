@@ -58,7 +58,7 @@ namespace BlockdudesTabs
             modsList.Insert(0, null);
             modsList.InsertRange(1, craftablesList.Where(def => def != null && def.ProducedThingDef != null && def.modContentPack != null).Select(def => def.modContentPack).Distinct());
             // remove all indicator if there is only one mod
-            if (modsList.Count <= 1)
+            if (modsList.Count <= 2)
                 modsList.RemoveAt(0);
 
             categoryList = new List<ThingCategoryDef>();
@@ -73,7 +73,6 @@ namespace BlockdudesTabs
         {
             Rect menuRect = windowRect.ContractedBy(Margin);
             Text.Font = GameFont.Small;
-            GUI.color = Color.white;
 
             DoSearchBox(new Rect(
                 menuRect.width / 2f,
