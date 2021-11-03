@@ -15,7 +15,9 @@ namespace BlockdudesTabs
         private static bool canCraft = false;
         public enum EventCode
         {
-            NoAvailableWorktables = -4,
+            RecipeNotAvailable = -5,
+            NoAvailableWorktables,
+            NoSelectedWorktableType,
             ResearchIncomplete,
             IncompatibleRecipe,
             NoEvent,
@@ -95,36 +97,43 @@ namespace BlockdudesTabs
             return update;
         }
 
-        public static (Bill_Production bill, EventCode eventVal) DrawMakeBillButton(Rect button, RecipeDef recipe, ThingDef worktableType = null, bool doChecking = true)
+        public static (Bill_Production bill, EventCode eventVal) DrawMakeBillButton(Rect button, RecipeDef recipe, ThingDef worktableType, bool doChecking = true)
         {
             if (Widgets.ButtonText(button, "Make Bill"))
             {
                 if (doChecking)
                 {
+                    // check if we have a worktable selected
+                    if (worktableType == null)
+                        return (null, EventCode.NoSelectedWorktableType);
+
                     // check if recipe is compatible with selected worktable
-                    if (worktableType != null && !recipe.AllRecipeUsers.Contains(worktableType))
+                    if (!recipe.AllRecipeUsers.Contains(worktableType))
                         return (null, EventCode.IncompatibleRecipe);
 
                     // check if research for item is done. note: don't need to check if worktable research is finished
-                    if (recipe.researchPrerequisite != null && !(recipe.researchPrerequisite.IsFinished && recipe.researchPrerequisite.PrerequisitesCompleted))
+                    if (recipe.researchPrerequisite != null && !recipe.researchPrerequisite.IsFinished)
                         return (null, EventCode.ResearchIncomplete);
+
+                    if (!recipe.AvailableNow)
+                        return (null, EventCode.RecipeNotAvailable);
 
                     // find, filter, and update worktables on map
                     List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
-                    if (worktableType != null)
-                        worktablesOnMap = worktablesOnMap.Where(def => def.def == worktableType).ToList();
+                    worktablesOnMap = worktablesOnMap.Where(def => def.def == worktableType).ToList();
 
                     // check if there are any available compatible worktables
                     if (worktablesOnMap.Count == 0)
                         return (null, EventCode.NoAvailableWorktables);
                 }
 
+                // open bill config menu
                 Building_WorkTable tempTable = new Building_WorkTable();
                 bill = new Bill_Production(recipe);
                 billConfig = new Dialog_BillConfig(bill, tempTable.Position);
+                // note: need to add bill to temp table or bill config will not open properly
                 tempTable.billStack.AddBill(bill);
                 Find.WindowStack.Add(billConfig);
-
                 canCraft = true;
 
                 return (null, EventCode.ButtonPressed);

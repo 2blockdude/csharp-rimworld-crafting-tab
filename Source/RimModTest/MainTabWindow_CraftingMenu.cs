@@ -54,8 +54,9 @@ namespace BlockdudesTabs
 
             // generate lists
             modsList = new List<ModMetaData>();
-            modsList.Insert(0, null);
-            modsList.InsertRange(1, DefDatabase<RecipeDef>.AllDefsListForReading.Where(def => def.ProducedThingDef != null).Select(def => def.modContentPack.ModMetaData).Distinct());
+            modsList.InsertRange(0, DefDatabase<RecipeDef>.AllDefsListForReading.Where(def => def.ProducedThingDef != null).Select(def => def.modContentPack.ModMetaData).Distinct());
+            if (modsList.Count > 1)
+                modsList.Insert(0, null);
 
             categoryList = new List<ThingCategoryDef>();
             categoryList.Insert(0, null);
@@ -158,6 +159,9 @@ namespace BlockdudesTabs
                 RecipeDef item = craftablesFilteredList[selected];
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 selectedCraftable = item;
+                // reset selected work benches when clicking on new item
+                selectedWorktableType = null;
+                selectedWorktable = null;
             }
         }
 
@@ -254,9 +258,20 @@ namespace BlockdudesTabs
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 selectedWorktableType = allowedTables[selected];
 
-                List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
-                worktablesOnMap = worktablesOnMap.Where(def => def.def == selectedWorktableType).ToList();
-                worktablesOnMap.Insert(0, null);
+                if (Input.GetMouseButtonUp(1))
+                {
+                    List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
+                    worktablesOnMap = worktablesOnMap.Where(def => def.def == selectedWorktableType).ToList();
+
+                    List<FloatMenuOption> options = new List<FloatMenuOption>();
+                    foreach (Building_WorkTable table in worktablesOnMap)
+                    {
+                        options.Add(new FloatMenuOption(table.Label, default(Action)));
+                    }
+
+                    if (options.Count != 0)
+                        Find.WindowStack.Add(new FloatMenu(options));
+                }
             }
         }
 
@@ -267,21 +282,41 @@ namespace BlockdudesTabs
             Bill_Production bill = buttonState.bill;
             GeneralUI.EventCode eventVal = buttonState.eventVal;
 
-            if (bill != null)
+            switch (eventVal)
             {
-                if (selectedWorktable != null)
-                {
-                    selectedWorktable.BillStack.AddBill(bill.Clone());
-                }
-                else if (selectedWorktableType != null)
-                {
-                    List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
-                    worktablesOnMap = worktablesOnMap.Where(def => def.def == selectedWorktableType).ToList();
+                case GeneralUI.EventCode.BillComplete:
+                    if (selectedWorktable != null)
+                    {
+                        selectedWorktable.BillStack.AddBill(bill.Clone());
+                        Messages.Message("Bill added to worktable.", null, MessageTypeDefOf.PositiveEvent, null);
+                    }
+                    else if (selectedWorktableType != null)
+                    {
+                        List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
+                        worktablesOnMap = worktablesOnMap.Where(def => def.def == selectedWorktableType).ToList();
 
-                    // add bill to each worktable on current map
-                    foreach (Building_WorkTable table in worktablesOnMap)
-                        table.BillStack.AddBill(bill.Clone());
-                }
+                        // add bill to each worktable on current map
+                        foreach (Building_WorkTable table in worktablesOnMap)
+                            table.BillStack.AddBill(bill.Clone());
+                        Messages.Message("Bill added to all worktables.", null, MessageTypeDefOf.PositiveEvent, null);
+                    }
+                    break;
+
+                case GeneralUI.EventCode.IncompatibleRecipe:
+                    Messages.Message("Bill not compatiable with worktable.", null, MessageTypeDefOf.CautionInput, null);
+                    break;
+                case GeneralUI.EventCode.NoAvailableWorktables:
+                    Messages.Message("No available worktables for bill.", null, MessageTypeDefOf.CautionInput, null);
+                    break;
+                case GeneralUI.EventCode.RecipeNotAvailable:
+                    Messages.Message("Bill not available due to faction type or memes.", null, MessageTypeDefOf.CautionInput, null);
+                    break;
+                case GeneralUI.EventCode.ResearchIncomplete:
+                    Messages.Message("Research not unlocked for this bill", null, MessageTypeDefOf.CautionInput, null);
+                    break;
+                case GeneralUI.EventCode.NoSelectedWorktableType:
+                    Messages.Message("Select worktable or worktable type.", null, MessageTypeDefOf.CautionInput, null);
+                    break;
             }
         }
 
@@ -302,7 +337,7 @@ namespace BlockdudesTabs
             Widgets.DrawHighlightIfMouseover(button);
 
             string buttonTitle = item == null ? "All" : item.label;
-            Widgets.Label(button, buttonTitle);
+            Widgets.Label(button, buttonTitle.CapitalizeFirst());
         }
 
         private void DrawCraftablesButtons(RecipeDef item, Rect button)
