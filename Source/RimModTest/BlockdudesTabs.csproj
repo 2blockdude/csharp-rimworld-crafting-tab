@@ -76,7 +76,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CraftingMenu.cs" />
+    <Compile Include="MainTabWindow_CraftingMenu.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="GeneralUI.cs" />
   </ItemGroup>

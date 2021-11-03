@@ -9,24 +9,19 @@ namespace BlockdudesTabs
 {
     public static class GeneralUI
     {
-        // used for crafting button thing. don't know how to do this better yet so i will keep this till further notice
+        // only used for crafting button thing. don't know how to do this better yet so i will keep this till further notice
         private static Bill_Production bill = null;
         private static Dialog_BillConfig billConfig = null;
         private static bool canCraft = false;
-
-        //public static int DrawScrollTab<T>(Rect rectOut, Action<T, Rect> draw, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f)
-        //{
-        //    Rect rectView = new Rect(0f, 0f, rectOut.width - 16f, list.Count * buttonHeight);
-        //    Widgets.BeginScrollView(rectOut, ref scrollPosition, rectView);
-
-        //    // expected custom function for drawing buttons
-        //    for (int i = 0; i < list.Count; i++)
-        //        draw(list[i], new Rect(0f, i * buttonHeight, rectView.width, buttonHeight));
-
-        //    Widgets.EndScrollView();
-
-        //    return 1;
-        //}
+        public enum EventCode
+        {
+            NoAvailableWorktables = -4,
+            ResearchIncomplete,
+            IncompatibleRecipe,
+            NoEvent,
+            ButtonPressed,
+            BillComplete
+        }
 
         public static int DrawScrollTab<T>(Rect rectOut, Action<T, Rect> decorateButton, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f, bool doMouseoverSound = false)
         {
@@ -100,13 +95,29 @@ namespace BlockdudesTabs
             return update;
         }
 
-        public static Bill_Production DrawMakeBillButton(Rect button, RecipeDef recipe)
+        public static (Bill_Production bill, EventCode eventVal) DrawMakeBillButton(Rect button, RecipeDef recipe, ThingDef worktableType = null, bool doChecking = true)
         {
             if (Widgets.ButtonText(button, "Make Bill"))
             {
-                // return if recipe is null but still draw the button
-                if (recipe == null)
-                    return null;
+                if (doChecking)
+                {
+                    // check if recipe is compatible with selected worktable
+                    if (worktableType != null && !recipe.AllRecipeUsers.Contains(worktableType))
+                        return (null, EventCode.IncompatibleRecipe);
+
+                    // check if research for item is done. note: don't need to check if worktable research is finished
+                    if (recipe.researchPrerequisite != null && !(recipe.researchPrerequisite.IsFinished && recipe.researchPrerequisite.PrerequisitesCompleted))
+                        return (null, EventCode.ResearchIncomplete);
+
+                    // find, filter, and update worktables on map
+                    List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
+                    if (worktableType != null)
+                        worktablesOnMap = worktablesOnMap.Where(def => def.def == worktableType).ToList();
+
+                    // check if there are any available compatible worktables
+                    if (worktablesOnMap.Count == 0)
+                        return (null, EventCode.NoAvailableWorktables);
+                }
 
                 Building_WorkTable tempTable = new Building_WorkTable();
                 bill = new Bill_Production(recipe);
@@ -115,16 +126,18 @@ namespace BlockdudesTabs
                 Find.WindowStack.Add(billConfig);
 
                 canCraft = true;
+
+                return (null, EventCode.ButtonPressed);
             }
 
             // only returns bills after billconfig is closed
             if (recipe != null && canCraft && billConfig != null && billConfig.IsOpen == false)
             {
                 canCraft = false;
-                return bill;
+                return (bill, EventCode.BillComplete);
             }
 
-            return null;
+            return (null, EventCode.NoEvent);
         }
     }
 }

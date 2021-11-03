@@ -9,7 +9,7 @@ using Verse;
 namespace BlockdudesTabs
 {
     [StaticConstructorOnStartup]
-    public class CraftingMenu : MainTabWindow
+    public class MainTabWindow_CraftingMenu : MainTabWindow
     {
         // Tab Settings
         public override Vector2 RequestedTabSize => new Vector2(700f, 700f);
@@ -47,7 +47,7 @@ namespace BlockdudesTabs
         public ThingDef selectedWorktableType = null;
         public Building_WorkTable selectedWorktable = null;
 
-        public CraftingMenu()
+        public MainTabWindow_CraftingMenu()
         {
             base.draggable = false;
             base.resizeable = false;
@@ -262,36 +262,19 @@ namespace BlockdudesTabs
 
         private void MakeBillButton(Rect button, RecipeDef recipe)
         {
-            Bill_Production bill;
+            (Bill_Production bill, GeneralUI.EventCode eventVal) buttonState = GeneralUI.DrawMakeBillButton(button, recipe, selectedWorktableType);
 
-            // check if recipe is compatible with selected worktable
-            if (selectedWorktableType == null || !recipe.AllRecipeUsers.Contains(selectedWorktableType))
-            {
-                // i still want the button to be drawn
-                bill = GeneralUI.DrawMakeBillButton(button, null);
-                return;
-            }
-
-            // check if research for item is done. note: don't need to check if worktable research is finished
-            if (recipe.researchPrerequisite != null && !(recipe.researchPrerequisite.IsFinished && recipe.researchPrerequisite.PrerequisitesCompleted))
-            {
-                // button still drawn
-                bill = GeneralUI.DrawMakeBillButton(button, null);
-                return;
-            }
-
-            bill = GeneralUI.DrawMakeBillButton(button, recipe);
+            Bill_Production bill = buttonState.bill;
+            GeneralUI.EventCode eventVal = buttonState.eventVal;
 
             if (bill != null)
             {
-                // decide if the bill should go to all worktables or just one
                 if (selectedWorktable != null)
                 {
                     selectedWorktable.BillStack.AddBill(bill.Clone());
                 }
                 else if (selectedWorktableType != null)
                 {
-                    // find and filter worktables on map
                     List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
                     worktablesOnMap = worktablesOnMap.Where(def => def.def == selectedWorktableType).ToList();
 
@@ -403,6 +386,14 @@ namespace BlockdudesTabs
             }
 
             return filteredList;
+        }
+
+        private List<Building_WorkTable> FindWorktablesOnMap(ThingDef worktableType)
+        {
+            List<Building_WorkTable> worktables = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
+            worktables = worktables.Where(def => def.def == worktableType).ToList();
+            worktables.Insert(0, null);
+            return worktables;
         }
     }
 }
