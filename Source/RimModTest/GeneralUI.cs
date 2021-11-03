@@ -104,6 +104,13 @@ namespace BlockdudesTabs
             {
                 if (doChecking)
                 {
+                    // check if research for item is done. note: don't need to check if worktable research is finished
+                    if (recipe.researchPrerequisite != null && !recipe.researchPrerequisite.IsFinished)
+                        return (null, EventCode.ResearchIncomplete);
+
+                    if (!recipe.AvailableNow)
+                        return (null, EventCode.RecipeNotAvailable);
+
                     // check if we have a worktable selected
                     if (worktableType == null)
                         return (null, EventCode.NoSelectedWorktableType);
@@ -111,13 +118,6 @@ namespace BlockdudesTabs
                     // check if recipe is compatible with selected worktable
                     if (!recipe.AllRecipeUsers.Contains(worktableType))
                         return (null, EventCode.IncompatibleRecipe);
-
-                    // check if research for item is done. note: don't need to check if worktable research is finished
-                    if (recipe.researchPrerequisite != null && !recipe.researchPrerequisite.IsFinished)
-                        return (null, EventCode.ResearchIncomplete);
-
-                    if (!recipe.AvailableNow)
-                        return (null, EventCode.RecipeNotAvailable);
 
                     // find, filter, and update worktables on map
                     List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
