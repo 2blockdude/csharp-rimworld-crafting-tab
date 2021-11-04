@@ -206,5 +206,26 @@ namespace BlockdudesTabs
 
             return rect;
         }
+
+        public static bool CheckboxMinimal(Rect rect, string description, Color color, ref bool currentState, float margin = 2f)
+        {
+            GUI.color = color;
+            Widgets.DrawBox(rect);
+            GUI.color = Color.white;
+
+            if (description != "")
+                TooltipHandler.TipRegion(rect, new TipSignal(description));
+
+            if (currentState)
+                Widgets.DrawBoxSolid(rect.ContractedBy(margin), color);
+
+            if (Widgets.ButtonText(rect, "", false, false))
+            {
+                currentState = !currentState;
+                return true;
+            }
+
+            return false;
+        }
     }
 }
