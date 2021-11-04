@@ -53,7 +53,6 @@ namespace BlockdudesTabs
         // filter by researched only
         public bool isResearchOnly = false;
 
-
         public MainTabWindow_CraftingMenu()
         {
             base.draggable = false;
