@@ -43,7 +43,7 @@ namespace BlockdudesTabs
 
         // selected worktables to add bill to
         public ThingDef selectedWorktableType = null;
-        public Building_WorkTable selectedWorktable = null;
+        public Building selectedWorktable = null;
 
         public MainTabWindow_CraftingMenu()
         {
@@ -56,7 +56,7 @@ namespace BlockdudesTabs
             // note: I insert a null value into list to indicate a selection of all items in list
             modsList = new List<ModContentPack>();
             modsList.Insert(0, null);
-            modsList.InsertRange(1, craftablesList.Where(def => def != null && def.ProducedThingDef != null && def.modContentPack != null).Select(def => def.modContentPack).Distinct());
+            modsList.InsertRange(1, craftablesList.Where(def => def != null && def.ProducedThingDef != null && def.ProducedThingDef.modContentPack != null).Select(def => def.ProducedThingDef.modContentPack).Distinct());
             // remove all indicator if there is only one mod
             if (modsList.Count <= 2)
                 modsList.RemoveAt(0);
@@ -229,7 +229,7 @@ namespace BlockdudesTabs
             Text.Font = GameFont.Medium;
             Widgets.Label(rectThingLabel, selectedCraftable.ProducedThingDef.label.CapitalizeFirst());
             Text.Font = GameFont.Tiny;
-            Widgets.Label(rectModLabel, "Source: " + selectedCraftable.modContentPack.Name);
+            Widgets.Label(rectModLabel, "Source: " + (selectedCraftable.ProducedThingDef == null || selectedCraftable.ProducedThingDef.modContentPack == null || selectedCraftable.ProducedThingDef.modContentPack.Name == null ? "None" : selectedCraftable.ProducedThingDef.modContentPack.Name));
             Text.Font = GameFont.Small;
 
             Widgets.LabelScrollable(rectDescription, selectedCraftable.ProducedThingDef.description, ref _scrollPositionDescription);
@@ -249,26 +249,46 @@ namespace BlockdudesTabs
             int selected = GeneralUI.ScrollMenu(rectView, DecorateWorktableButtons, tableDefs, ref _scrollPositionWorkBenches);
             if (selected > -1)
             {
-                SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 selectedWorktableType = tableDefs[selected];
+
+                // only if button is left clicked
+                if (Input.GetMouseButtonUp(0))
+                {
+                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
+
+                    if (selectedWorktable != null)
+                        CameraJumper.TryJumpAndSelect(selectedWorktable);
+                    else
+                    {
+                        Find.Selector.ClearSelection();
+                        foreach (Building table in FindWorktablesOnMap(selectedWorktableType))
+                            Find.Selector.Select(table);
+                    }
+                }
 
                 // only show float menu if button is right clicked
                 if (Input.GetMouseButtonUp(1))
                 {
-                    List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
-                    worktablesOnMap = worktablesOnMap.Where(def => def.def == selectedWorktableType).ToList();
-
+                    List<Building> worktablesOnMap = FindWorktablesOnMap(selectedWorktableType);
+                    if (worktablesOnMap.Count() > 1)
+                        worktablesOnMap.Insert(0, null);
                     List<FloatMenuOption> options = new List<FloatMenuOption>();
-                    int i = 1;
-                    foreach (Building_WorkTable table in worktablesOnMap)
+
+                    foreach (Building table in worktablesOnMap)
                     {
-                        Action action = delegate ()
+                        Action select = delegate()
                         {
                             selectedWorktable = table;
                             CameraJumper.TryJumpAndSelect(table);
+
+                            if (selectedWorktable == null)
+                            {
+                                Find.Selector.ClearSelection();
+                                foreach (Building all in FindWorktablesOnMap(selectedWorktableType))
+                                    Find.Selector.Select(all);
+                            }
                         };
-                        options.Add(new FloatMenuOption(table.Label + " " + $"{i}", action));
-                        i++;
+                        options.Add(new FloatMenuOption(table != null ? table.Label.CapitalizeFirst() + $": {table.thingIDNumber}" : "All", select));
                     }
 
                     if (options.Count != 0)
@@ -295,17 +315,16 @@ namespace BlockdudesTabs
                 case GeneralUI.EventCode.BillComplete:
                     if (selectedWorktable != null)
                     {
-                        selectedWorktable.BillStack.AddBill(bill.Clone());
+                        ((Building_WorkTable)selectedWorktable).BillStack.AddBill(bill.Clone());
                         Messages.Message("Bill added to worktable.", null, MessageTypeDefOf.PositiveEvent, null);
                     }
                     else if (selectedWorktableType != null)
                     {
-                        List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
-                        worktablesOnMap = worktablesOnMap.Where(def => def.def == selectedWorktableType).ToList();
+                        List<Building> worktablesOnMap = FindWorktablesOnMap(selectedWorktableType);
 
                         // add bill to each worktable on current map
-                        foreach (Building_WorkTable table in worktablesOnMap)
-                            table.BillStack.AddBill(bill.Clone());
+                        foreach (Building table in worktablesOnMap)
+                            ((Building_WorkTable)table).BillStack.AddBill(bill.Clone());
                         Messages.Message("Bill added to all worktables.", null, MessageTypeDefOf.PositiveEvent, null);
                     }
                     break;
@@ -359,14 +378,26 @@ namespace BlockdudesTabs
             Widgets.DrawHighlightIfMouseover(button);
 
             TooltipHandler.TipRegion(button, new TipSignal(item.ProducedThingDef.description));
-            Widgets.Label(button, item.ProducedThingDef.label.CapitalizeFirst());
+
+            Rect rectPreviewImage = new Rect(button.x, button.y, button.height, button.height);
+            if (item.ProducedThingDef.uiIconColor != null)
+                GUI.color = item.ProducedThingDef.uiIconColor;
+            Widgets.DrawTextureFitted(rectPreviewImage.ContractedBy(2f), item.ProducedThingDef.uiIcon, 1f); ;
+            GUI.color = Color.white;
+
+            Rect rectLabel = new Rect(button.x + rectPreviewImage.width + 5f, button.y, button.width - rectPreviewImage.width - 5f, button.height);
+
+            string buttonLabel = item.ProducedThingDef.label.CapitalizeFirst();
+            Text.Anchor = TextAnchor.MiddleLeft;
+            Widgets.Label(rectLabel, buttonLabel);
+            Text.Anchor = TextAnchor.UpperLeft;
         }
 
         private void DecorateWorktableButtons(ThingDef item, Rect button)
         {
             if (selectedWorktableType == item) Widgets.DrawHighlight(button);
             Widgets.DrawHighlightIfMouseover(button);
-            Widgets.Label(button, item.label.CapitalizeFirst());
+            Widgets.Label(button, item.label.CapitalizeFirst() + (selectedWorktable != null && selectedWorktable.def == item? ": " + selectedWorktable.thingIDNumber : ""));
         }
 
         private void DecorateRecipeButtons(IngredientCount item, Rect button)
@@ -392,7 +423,7 @@ namespace BlockdudesTabs
 
             // filter mod
             if (modFilter != null)
-                filteredList = filteredList.Where(def => def != null && def.modContentPack != null && def.modContentPack == modFilter).ToList();
+                filteredList = filteredList.Where(def => def != null && def.ProducedThingDef != null && def.ProducedThingDef.modContentPack != null && def.ProducedThingDef.modContentPack == modFilter).ToList();
 
             return filteredList;
         }
@@ -425,7 +456,7 @@ namespace BlockdudesTabs
             {
                 // filter whitelist to have only selected mod items
                 if (modFilter != null)
-                    whiteList = whiteList.Where(def => def != null && def.modContentPack != null && def.modContentPack == modFilter).ToList();
+                    whiteList = whiteList.Where(def => def != null && def.ProducedThingDef != null && def.ProducedThingDef.modContentPack != null && def.ProducedThingDef.modContentPack == modFilter).ToList();
 
                 // filter whitelist to only contain items with thingDefSearch string
                 if (thingDefSearch != null)
@@ -441,9 +472,9 @@ namespace BlockdudesTabs
             return filteredList;
         }
 
-        public static List<Building_WorkTable> FindWorktablesOnMap(ThingDef worktableType)
+        public static List<Building> FindWorktablesOnMap(ThingDef worktableType)
         {
-            List<Building_WorkTable> worktables = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
+            List<Building> worktables = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building>().ToList();
             worktables = worktables.Where(def => def.def == worktableType).ToList();
             return worktables;
         }

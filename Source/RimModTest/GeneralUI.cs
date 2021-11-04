@@ -120,7 +120,7 @@ namespace BlockdudesTabs
                         return (null, EventCode.IncompatibleRecipe);
 
                     // find, filter, and update worktables on map
-                    List<Building_WorkTable> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building_WorkTable>().ToList();
+                    List<Building> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building>().ToList();
                     worktablesOnMap = worktablesOnMap.Where(def => def.def == worktableType).ToList();
 
                     // check if there are any available compatible worktables
