@@ -79,6 +79,14 @@ namespace BlockdudesTabs
             Text.Font = GameFont.Small;
             GUI.color = Color.white;
 
+            // see if research project is finished and if it is then update the menu list if research only is turned on
+            if (isResearchOnly && Find.ResearchManager.currentProj != null && Find.ResearchManager.GetProgress(Find.ResearchManager.currentProj) == Find.ResearchManager.currentProj.baseCost)
+            {
+                modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly);
+                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly);
+                recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly);
+            }
+
             DoSearchBox(new Rect(
                 menuRect.width / 2f,
                 0f,
@@ -99,12 +107,19 @@ namespace BlockdudesTabs
                 menuRect.height / 3f)
                 .ContractedBy(outMargin));
 
-            DoItemsTab(new Rect(
+            Rect rectItemsTab = new Rect(
                 menuRect.width / 2f,
                 30f,
                 menuRect.width / 2f,
                 menuRect.height / 3f * 2f - 30f)
-                .ContractedBy(outMargin));
+                .ContractedBy(outMargin);
+            DoItemsTab(rectItemsTab);
+
+            DoResearchOnlyCheckBox(new Rect(
+                rectItemsTab.x + inMargin,
+                rectItemsTab.y + inMargin,
+                15f,
+                15f));
 
             DoItemDescription(new Rect(
                 0f,
@@ -117,21 +132,21 @@ namespace BlockdudesTabs
 
         // start of menu ui functions
         // --------------------------
-        public void DoSearchBox(Rect rectSearchBox)
+        public void DoSearchBox(Rect rect)
         {
-            if (GeneralUI.SearchBar(rectSearchBox, ref searchString))
+            if (GeneralUI.SearchBar(rect, ref searchString))
             {
                 recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly);
                 categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, "", isResearchOnly);
             }
         }
 
-        public void DoModsTab(Rect rectTab)
+        public void DoModsTab(Rect rect)
         {
-            rectTab = GeneralUI.LabelColorAndOutLine(rectTab, "Mods", Color.gray, TextAnchor.UpperCenter, inMargin);
+            rect = GeneralUI.LabelColorAndOutLine(rect, "Mods", Color.gray, TextAnchor.UpperCenter, inMargin);
 
             ModContentPack item = null;
-            if (GeneralUI.ScrollMenu(rectTab, DecorateModButton, modFilteredList, ref item, ref _scrollPositionModTab))
+            if (GeneralUI.ScrollMenu(rect, DecorateModButton, modFilteredList, ref item, ref _scrollPositionModTab))
             {
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 selectedModContentPack = item;
@@ -141,12 +156,12 @@ namespace BlockdudesTabs
             }
         }
 
-        public void DoCategoriesTab(Rect rectTab)
+        public void DoCategoriesTab(Rect rect)
         {
-            rectTab = GeneralUI.LabelColorAndOutLine(rectTab, "Categories", Color.gray, TextAnchor.UpperCenter, inMargin);
+            rect = GeneralUI.LabelColorAndOutLine(rect, "Categories", Color.gray, TextAnchor.UpperCenter, inMargin);
 
             ThingCategoryDef item = null;
-            if (GeneralUI.ScrollMenu(rectTab, DecorateCategoryButton, categoryFilteredList, ref item, ref _scrollPositionCategoryTab))
+            if (GeneralUI.ScrollMenu(rect, DecorateCategoryButton, categoryFilteredList, ref item, ref _scrollPositionCategoryTab))
             {
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 selectedCategoryDef = item;
@@ -154,40 +169,42 @@ namespace BlockdudesTabs
             }
         }
 
-        public void DoItemsTab(Rect rectTab)
+        public void DoItemsTab(Rect rect)
         {
-            Rect checkbox = new Rect(rectTab.x + inMargin, rectTab.y + inMargin, 15f, 15f);
-            if (GeneralUI.CheckboxMinimal(checkbox, "Show Available Only", Color.gray, ref isResearchOnly))
-            {
-                modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly);
-                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly);
-                recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly);
-            }
-
-            rectTab = GeneralUI.LabelColorAndOutLine(rectTab, "Items", Color.gray, TextAnchor.UpperCenter, inMargin);
+            rect = GeneralUI.LabelColorAndOutLine(rect, "Items", Color.gray, TextAnchor.UpperCenter, inMargin);
 
             RecipeDef item = null;
-            if (GeneralUI.ScrollMenu(rectTab, DecorateItemButton, recipeFilteredList, ref item, ref _scrollPositionThingTab))
+            if (GeneralUI.ScrollMenu(rect, DecorateItemButton, recipeFilteredList, ref item, ref _scrollPositionThingTab))
             {
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 selectedRecipeDef = item;
             }
         }
 
-        public void DoItemDescription(Rect rectTab)
+        public void DoResearchOnlyCheckBox(Rect rect)
+        {
+            if (GeneralUI.CheckboxMinimal(rect, "Show Available Only", Color.gray, ref isResearchOnly))
+            {
+                modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly);
+                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly);
+                recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly);
+            }
+        }
+
+        public void DoItemDescription(Rect rect)
         {
             GUI.color = Color.gray;
-            Widgets.DrawBox(rectTab);
+            Widgets.DrawBox(rect);
             GUI.color = Color.white;
-            Widgets.DrawAltRect(rectTab);
+            Widgets.DrawAltRect(rect);
 
-            rectTab = rectTab.ContractedBy(inMargin);
+            rect = rect.ContractedBy(inMargin);
 
             if (selectedRecipeDef == null) return;
 
             Rect rectThingLabel = new Rect(
-                rectTab.x,
-                rectTab.y,
+                rect.x,
+                rect.y,
                 200f,
                 30f);
 
@@ -198,26 +215,26 @@ namespace BlockdudesTabs
                 20f);
 
             Rect rectDescription = new Rect(
-                rectTab.x,
-                rectTab.y + (rectTab.height / 3f),
-                rectTab.width / 3f,
-                rectTab.height / 3f * 2f);
+                rect.x,
+                rect.y + (rect.height / 3f),
+                rect.width / 3f,
+                rect.height / 3f * 2f);
 
             Rect rectRecipe = new Rect(
-                rectTab.x + rectTab.width / 3f,
-                rectTab.y + rectTab.height / 3f,
-                rectTab.width / 3f,
-                rectTab.height / 3f * 2f);
+                rect.x + rect.width / 3f,
+                rect.y + rect.height / 3f,
+                rect.width / 3f,
+                rect.height / 3f * 2f);
 
             Rect rectWorktables = new Rect(
-                rectTab.x + rectTab.width / 3f * 2f,
-                rectTab.y + rectTab.height / 3f,
-                rectTab.width / 3f,
-                rectTab.height / 3f * 2f);
+                rect.x + rect.width / 3f * 2f,
+                rect.y + rect.height / 3f,
+                rect.width / 3f,
+                rect.height / 3f * 2f);
 
             Rect rectInfo = new Rect(
-                rectTab.x + rectTab.width - 30f,
-                rectTab.y,
+                rect.x + rect.width - 30f,
+                rect.y,
                 30f,
                 30f);
 
