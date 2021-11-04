@@ -250,6 +250,8 @@ namespace BlockdudesTabs
             if (selected > -1)
             {
                 selectedWorktableType = tableDefs[selected];
+                if (selectedWorktable != null && selectedWorktable.def != selectedWorktableType)
+                    selectedWorktable = null;
 
                 // only if button is left clicked
                 if (Input.GetMouseButtonUp(0))
