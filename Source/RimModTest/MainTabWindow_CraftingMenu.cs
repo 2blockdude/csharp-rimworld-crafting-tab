@@ -256,7 +256,7 @@ namespace BlockdudesTabs
                 {
                     SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
 
-                    if (selectedWorktable != null)
+                    if (selectedWorktable != null && selectedWorktable.def == selectedWorktableType)
                         CameraJumper.TryJumpAndSelect(selectedWorktable);
                     else
                     {
