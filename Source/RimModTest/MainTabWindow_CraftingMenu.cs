@@ -28,11 +28,14 @@ namespace BlockdudesTabs
         internal static Vector2 _scrollPositionWorkBenches = Vector2.zero;
 
         // Lists
-        public static HashSet<Tuple<ThingDef, List<RecipeDef>>> thingListCompact = null;
         public static List<ModContentPack> modList = null;
         public static List<ThingCategoryDef> categoryList = null;
         public static List<RecipeDef> recipeList = null;
 
+        // note for future: this could be what i was looking for
+        public static List<IGrouping<ThingDef, RecipeDef>> recipeListCompact = null;
+
+        // changing lists
         public List<ModContentPack> modFilteredList = null;
         public List<ThingCategoryDef> categoryFilteredList = null;
         public List<RecipeDef> recipeFilteredList = null;
@@ -42,10 +45,6 @@ namespace BlockdudesTabs
         public ThingCategoryDef selectedCategoryDef = null;
         public RecipeDef selectedRecipeDef = null;
         public string searchString = "";
-
-        // selected worktables to add bill to
-        public ThingDef selectedWorktableType = null;
-        public Building selectedWorktable = null;
 
         // bill making stuff
         public Bill_Production bill = null;
@@ -172,9 +171,6 @@ namespace BlockdudesTabs
             {
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 selectedRecipeDef = item;
-                // reset selected work benches when clicking on new item
-                selectedWorktableType = null;
-                selectedWorktable = null;
             }
         }
 
@@ -232,7 +228,7 @@ namespace BlockdudesTabs
                 30f);
 
             rectRecipe = GeneralUI.LabelColorAndOutLine(rectRecipe, "Info", Color.gray, TextAnchor.UpperCenter, inMargin);
-            rectWorktables = GeneralUI.LabelColorAndOutLine(rectWorktables, "Select worktable", Color.gray, TextAnchor.UpperCenter, inMargin);
+            rectWorktables = GeneralUI.LabelColorAndOutLine(rectWorktables, "Compatible worktable(s)", Color.gray, TextAnchor.UpperCenter, inMargin);
             rectDescription = GeneralUI.LabelColorAndOutLine(rectDescription, "Description", Color.gray, TextAnchor.UpperCenter, inMargin);
             rectInfo = rectInfo.ContractedBy(2f);
 
@@ -258,59 +254,11 @@ namespace BlockdudesTabs
             ThingDef selectedItem = null;
             if (GeneralUI.ScrollMenu(rectView, DecorateWorktableButton, selectedRecipeDef.AllRecipeUsers.Distinct().ToList(), ref selectedItem, ref _scrollPositionWorkBenches))
             {
-                selectedWorktableType = selectedItem;
-                if (selectedWorktable != null && selectedWorktable.def != selectedWorktableType)
-                    selectedWorktable = null;
+                if (!Input.GetKey(KeyCode.LeftShift))
+                    Find.Selector.ClearSelection();
 
-                // only if button is left clicked
-                if (Input.GetMouseButtonUp(0))
-                {
-                    SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
-
-                    if (selectedWorktable != null && selectedWorktable.def == selectedWorktableType)
-                        CameraJumper.TryJumpAndSelect(selectedWorktable);
-                    else
-                    {
-                        Find.Selector.ClearSelection();
-                        foreach (Building table in FindWorktablesOnMap(selectedWorktableType))
-                            Find.Selector.Select(table);
-                    }
-                }
-
-                // only show float menu if button is right clicked
-                if (Input.GetMouseButtonUp(1))
-                {
-                    List<Building> worktablesOnMap = FindWorktablesOnMap(selectedWorktableType);
-                    if (worktablesOnMap.Count() > 1)
-                        worktablesOnMap.Insert(0, null);
-                    List<FloatMenuOption> options = new List<FloatMenuOption>();
-
-                    foreach (Building table in worktablesOnMap)
-                    {
-                        Action select = delegate ()
-                        {
-                            selectedWorktable = table;
-                            CameraJumper.TryJumpAndSelect(table);
-
-                            if (selectedWorktable == null)
-                            {
-                                Find.Selector.ClearSelection();
-                                foreach (Building all in FindWorktablesOnMap(selectedWorktableType))
-                                    Find.Selector.Select(all);
-                            }
-                        };
-                        options.Add(new FloatMenuOption(table != null ? table.Label.CapitalizeFirst() + $": {table.thingIDNumber}" : "All", select));
-                    }
-
-                    if (options.Count != 0)
-                    {
-                        Find.WindowStack.Add(new FloatMenu(options));
-                    }
-                    else
-                    {
-                        Messages.Message("Cannot find any worktables of this type.", null, MessageTypeDefOf.CautionInput, null);
-                    }
-                }
+                foreach (Building table in FindWorktablesOnMap(selectedItem))
+                    Find.Selector.Select(table);
             }
         }
 
@@ -331,6 +279,13 @@ namespace BlockdudesTabs
                     goto Exit;
                 }
 
+                List<Building> selectedWorktablesOnMap = Find.Selector.SelectedObjectsListForReading.OfType<Building>().Where(building => building != null && building.def != null && selectedRecipeDef != null && selectedRecipeDef.AllRecipeUsers != null && recipe.AllRecipeUsers.Any(def => building.def == def)).ToList();
+                if (selectedWorktablesOnMap.Count < 1)
+                {
+                    Messages.Message("No selected and/or compatable worktables to make bill with.", null, MessageTypeDefOf.CautionInput, null);
+                    goto Exit;
+                }
+
                 billConfig = GeneralUI.OpenDialogBillConfig(recipe, ref bill);
             Exit:;
             }
@@ -338,63 +293,18 @@ namespace BlockdudesTabs
             // checks if user is done making bill before adding bill to worktable(s)
             if (billConfig != null && billConfig.IsOpen == false)
             {
-                // add bill to stuff
-                if (selectedWorktable != null)
+                List<Building> selectedWorktablesOnMap = Find.Selector.SelectedObjectsListForReading.OfType<Building>().Where(building => building != null && building.def != null && selectedRecipeDef != null && selectedRecipeDef.AllRecipeUsers != null && recipe.AllRecipeUsers.Any(def => building.def == def)).ToList();
+                // note: i converted it to a building_worktable. won't work for mods like rimfactory where there buildings are a different type so this will throw and error
+                foreach (Building_WorkTable table in selectedWorktablesOnMap)
                 {
-                    ((Building_WorkTable)selectedWorktable).BillStack.AddBill(bill.Clone());
-                    Messages.Message("Bill added to worktable.", null, MessageTypeDefOf.PositiveEvent, null);
-                }
-                else if (selectedWorktableType != null)
-                {
-                    List<Building> worktablesOnMap = FindWorktablesOnMap(selectedWorktableType);
-
-                    // add bill to each worktable on current map
-                    foreach (Building table in worktablesOnMap)
-                        ((Building_WorkTable)table).BillStack.AddBill(bill.Clone());
-                    Messages.Message("Bill added to all worktables.", null, MessageTypeDefOf.PositiveEvent, null);
+                    table.BillStack.AddBill(bill.Clone());
+                    Messages.Message("Bill added to selected worktable(s).", null, MessageTypeDefOf.PositiveEvent, null);
                 }
 
                 // reset bill stuff
                 billConfig = null;
                 bill = null;
             }
-
-            //Bill_Production bill = null;
-            //switch (GeneralUI.MakeBillButton(button, recipe, selectedWorktableType, ref bill))
-            //{
-            //    case GeneralUI.EventCode.BillComplete:
-            //        if (selectedWorktable != null)
-            //        {
-            //            ((Building_WorkTable)selectedWorktable).BillStack.AddBill(bill.Clone());
-            //            Messages.Message("Bill added to worktable.", null, MessageTypeDefOf.PositiveEvent, null);
-            //        }
-            //        else if (selectedWorktableType != null)
-            //        {
-            //            List<Building> worktablesOnMap = FindWorktablesOnMap(selectedWorktableType);
-
-            //            // add bill to each worktable on current map
-            //            foreach (Building table in worktablesOnMap)
-            //                ((Building_WorkTable)table).BillStack.AddBill(bill.Clone());
-            //            Messages.Message("Bill added to all worktables.", null, MessageTypeDefOf.PositiveEvent, null);
-            //        }
-            //        break;
-
-            //    case GeneralUI.EventCode.IncompatibleRecipe:
-            //        Messages.Message("Bill not compatiable with worktable.", null, MessageTypeDefOf.CautionInput, null);
-            //        break;
-            //    case GeneralUI.EventCode.NoAvailableWorktables:
-            //        Messages.Message("No available worktables for bill.", null, MessageTypeDefOf.CautionInput, null);
-            //        break;
-            //    case GeneralUI.EventCode.RecipeNotAvailable:
-            //        Messages.Message("Bill not available.", null, MessageTypeDefOf.CautionInput, null);
-            //        break;
-            //    case GeneralUI.EventCode.ResearchIncomplete:
-            //        Messages.Message("Research not unlocked for this bill.", null, MessageTypeDefOf.CautionInput, null);
-            //        break;
-            //    case GeneralUI.EventCode.NoSelectedWorktableType:
-            //        Messages.Message("Select worktable or worktable type.", null, MessageTypeDefOf.CautionInput, null);
-            //        break;
-            //}
         }
         // -----------------------------------
         // end of description helper functions
@@ -445,9 +355,20 @@ namespace BlockdudesTabs
 
         private void DecorateWorktableButton(Rect button, ThingDef item)
         {
-            if (selectedWorktableType == item) Widgets.DrawHighlight(button);
             Widgets.DrawHighlightIfMouseover(button);
-            Widgets.Label(button, item.label.CapitalizeFirst() + (selectedWorktable != null && selectedWorktable.def == item ? ": " + selectedWorktable.thingIDNumber : ""));
+            TooltipHandler.TipRegion(button, new TipSignal("Select all " + item.label.CapitalizeFirst()));
+            Rect rectPreviewImage = new Rect(button.x, button.y, button.height, button.height);
+            if (item.uiIconColor != null)
+                GUI.color = item.uiIconColor;
+            Widgets.DrawTextureFitted(rectPreviewImage.ContractedBy(2f), item.uiIcon, 1f); ;
+            GUI.color = Color.white;
+
+            Rect rectLabel = new Rect(button.x + rectPreviewImage.width + 5f, button.y, button.width - rectPreviewImage.width - 5f, button.height);
+
+            string buttonLabel = item.label.CapitalizeFirst();
+            Text.Anchor = TextAnchor.MiddleLeft;
+            Widgets.Label(rectLabel, buttonLabel);
+            Text.Anchor = TextAnchor.UpperLeft;
         }
 
         private void DecorateRecipeButton(Rect button, IngredientCount item)
