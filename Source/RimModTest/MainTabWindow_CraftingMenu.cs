@@ -47,7 +47,13 @@ namespace BlockdudesTabs
         public ThingDef selectedWorktableType = null;
         public Building selectedWorktable = null;
 
+        // bill making stuff
+        public Bill_Production bill = null;
+        public Dialog_BillConfig billConfig = null;
+
+        // filter by researched only
         public bool isResearchOnly = false;
+
 
         public MainTabWindow_CraftingMenu()
         {
@@ -240,7 +246,7 @@ namespace BlockdudesTabs
             GeneralUI.ScrollMenu(rectRecipe, DecorateRecipeButton, selectedRecipeDef.ingredients, ref _scrollPositionRecipe, buttonHeight: 22f);
             Decription_WorktableButtons(rectWorktables);
             Widgets.InfoCardButton(rectInfo, selectedRecipeDef.ProducedThingDef);
-            Description_MakeBillButton(rectCraft, selectedRecipeDef);
+            Description_MakeBillButton(rectCraft, selectedRecipeDef, "Make Bill");
         }
         // ------------------------
         // end of menu ui functions
@@ -308,44 +314,87 @@ namespace BlockdudesTabs
             }
         }
 
-        private void Description_MakeBillButton(Rect button, RecipeDef recipe)
+        private void Description_MakeBillButton(Rect button, RecipeDef recipe, string buttonLabel)
         {
-            Bill_Production bill = null;
-            switch (GeneralUI.MakeBillButton(button, recipe, selectedWorktableType, ref bill))
+            if (Widgets.ButtonText(button, buttonLabel))
             {
-                case GeneralUI.EventCode.BillComplete:
-                    if (selectedWorktable != null)
-                    {
-                        ((Building_WorkTable)selectedWorktable).BillStack.AddBill(bill.Clone());
-                        Messages.Message("Bill added to worktable.", null, MessageTypeDefOf.PositiveEvent, null);
-                    }
-                    else if (selectedWorktableType != null)
-                    {
-                        List<Building> worktablesOnMap = FindWorktablesOnMap(selectedWorktableType);
-
-                        // add bill to each worktable on current map
-                        foreach (Building table in worktablesOnMap)
-                            ((Building_WorkTable)table).BillStack.AddBill(bill.Clone());
-                        Messages.Message("Bill added to all worktables.", null, MessageTypeDefOf.PositiveEvent, null);
-                    }
-                    break;
-
-                case GeneralUI.EventCode.IncompatibleRecipe:
-                    Messages.Message("Bill not compatiable with worktable.", null, MessageTypeDefOf.CautionInput, null);
-                    break;
-                case GeneralUI.EventCode.NoAvailableWorktables:
-                    Messages.Message("No available worktables for bill.", null, MessageTypeDefOf.CautionInput, null);
-                    break;
-                case GeneralUI.EventCode.RecipeNotAvailable:
-                    Messages.Message("Bill not available.", null, MessageTypeDefOf.CautionInput, null);
-                    break;
-                case GeneralUI.EventCode.ResearchIncomplete:
+                // check if research for item is done. note: don't need to check if worktable research is finished
+                if (recipe.researchPrerequisite != null && !recipe.researchPrerequisite.IsFinished)
+                {
                     Messages.Message("Research not unlocked for this bill.", null, MessageTypeDefOf.CautionInput, null);
-                    break;
-                case GeneralUI.EventCode.NoSelectedWorktableType:
-                    Messages.Message("Select worktable or worktable type.", null, MessageTypeDefOf.CautionInput, null);
-                    break;
+                    goto Exit;
+                }
+
+                if (!recipe.AvailableNow)
+                {
+                    Messages.Message("Bill not available for you right now.", null, MessageTypeDefOf.CautionInput, null);
+                    goto Exit;
+                }
+
+                billConfig = GeneralUI.OpenDialogBillConfig(recipe, ref bill);
+            Exit:;
             }
+
+            // checks if user is done making bill before adding bill to worktable(s)
+            if (billConfig != null && billConfig.IsOpen == false)
+            {
+                // add bill to stuff
+                if (selectedWorktable != null)
+                {
+                    ((Building_WorkTable)selectedWorktable).BillStack.AddBill(bill.Clone());
+                    Messages.Message("Bill added to worktable.", null, MessageTypeDefOf.PositiveEvent, null);
+                }
+                else if (selectedWorktableType != null)
+                {
+                    List<Building> worktablesOnMap = FindWorktablesOnMap(selectedWorktableType);
+
+                    // add bill to each worktable on current map
+                    foreach (Building table in worktablesOnMap)
+                        ((Building_WorkTable)table).BillStack.AddBill(bill.Clone());
+                    Messages.Message("Bill added to all worktables.", null, MessageTypeDefOf.PositiveEvent, null);
+                }
+
+                // reset bill stuff
+                billConfig = null;
+                bill = null;
+            }
+
+            //Bill_Production bill = null;
+            //switch (GeneralUI.MakeBillButton(button, recipe, selectedWorktableType, ref bill))
+            //{
+            //    case GeneralUI.EventCode.BillComplete:
+            //        if (selectedWorktable != null)
+            //        {
+            //            ((Building_WorkTable)selectedWorktable).BillStack.AddBill(bill.Clone());
+            //            Messages.Message("Bill added to worktable.", null, MessageTypeDefOf.PositiveEvent, null);
+            //        }
+            //        else if (selectedWorktableType != null)
+            //        {
+            //            List<Building> worktablesOnMap = FindWorktablesOnMap(selectedWorktableType);
+
+            //            // add bill to each worktable on current map
+            //            foreach (Building table in worktablesOnMap)
+            //                ((Building_WorkTable)table).BillStack.AddBill(bill.Clone());
+            //            Messages.Message("Bill added to all worktables.", null, MessageTypeDefOf.PositiveEvent, null);
+            //        }
+            //        break;
+
+            //    case GeneralUI.EventCode.IncompatibleRecipe:
+            //        Messages.Message("Bill not compatiable with worktable.", null, MessageTypeDefOf.CautionInput, null);
+            //        break;
+            //    case GeneralUI.EventCode.NoAvailableWorktables:
+            //        Messages.Message("No available worktables for bill.", null, MessageTypeDefOf.CautionInput, null);
+            //        break;
+            //    case GeneralUI.EventCode.RecipeNotAvailable:
+            //        Messages.Message("Bill not available.", null, MessageTypeDefOf.CautionInput, null);
+            //        break;
+            //    case GeneralUI.EventCode.ResearchIncomplete:
+            //        Messages.Message("Research not unlocked for this bill.", null, MessageTypeDefOf.CautionInput, null);
+            //        break;
+            //    case GeneralUI.EventCode.NoSelectedWorktableType:
+            //        Messages.Message("Select worktable or worktable type.", null, MessageTypeDefOf.CautionInput, null);
+            //        break;
+            //}
         }
         // -----------------------------------
         // end of description helper functions

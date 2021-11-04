@@ -9,22 +9,6 @@ namespace BlockdudesTabs
 {
     public static class GeneralUI
     {
-        // only used for crafting button thing. don't know how to do this better yet so i will keep this till further notice
-        private static Bill_Production bill = null;
-        private static Dialog_BillConfig billConfig = null;
-        private static bool canCraft = false;
-        public enum EventCode
-        {
-            RecipeNotAvailable = -5,
-            NoAvailableWorktables,
-            NoSelectedWorktableType,
-            ResearchIncomplete,
-            IncompatibleRecipe,
-            NoEvent,
-            ButtonPressed,
-            BillComplete
-        }
-
         public static int ScrollMenu<T>(Rect rectOut, Action<Rect, T> decorateButton, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f, bool doMouseoverSound = false)
         {
             int selectedItem = -1;
@@ -122,60 +106,20 @@ namespace BlockdudesTabs
         }
 
         // not sure if this is stupid or not but i like it here
-        public static EventCode MakeBillButton(Rect button, RecipeDef recipe, ThingDef worktableType, ref Bill_Production refBill, string buttonLabel = "Make Bill", bool doChecking = true)
+        public static Dialog_BillConfig OpenDialogBillConfig(RecipeDef recipe, ref Bill_Production bill)
         {
-            EventCode code = EventCode.NoEvent;
+            if (recipe == null)
+                return null;
 
-            if (Widgets.ButtonText(button, buttonLabel))
-            {
-                if (doChecking)
-                {
-                    // check if research for item is done. note: don't need to check if worktable research is finished
-                    if (recipe.researchPrerequisite != null && !recipe.researchPrerequisite.IsFinished)
-                        return (EventCode.ResearchIncomplete);
+            // open bill config menu
+            Building_WorkTable tempTable = new Building_WorkTable();
+            bill = new Bill_Production(recipe);
+            Dialog_BillConfig billConfig = new Dialog_BillConfig(bill, tempTable.Position);
+            // note: need to add bill to temp table or bill config will not open properly
+            tempTable.billStack.AddBill(bill);
+            Find.WindowStack.Add(billConfig);
 
-                    if (!recipe.AvailableNow)
-                        return (EventCode.RecipeNotAvailable);
-
-                    // check if we have a worktable selected
-                    if (worktableType == null)
-                        return (EventCode.NoSelectedWorktableType);
-
-                    // check if recipe is compatible with selected worktable
-                    if (!recipe.AllRecipeUsers.Contains(worktableType))
-                        return (EventCode.IncompatibleRecipe);
-
-                    // find, filter, and update worktables on map
-                    List<Building> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building>().ToList();
-                    worktablesOnMap = worktablesOnMap.Where(def => def.def == worktableType).ToList();
-
-                    // check if there are any available compatible worktables
-                    if (worktablesOnMap.Count == 0)
-                        return (EventCode.NoAvailableWorktables);
-                }
-
-                // open bill config menu
-                Building_WorkTable tempTable = new Building_WorkTable();
-                bill = new Bill_Production(recipe);
-                billConfig = new Dialog_BillConfig(bill, tempTable.Position);
-                // note: need to add bill to temp table or bill config will not open properly
-                tempTable.billStack.AddBill(bill);
-                Find.WindowStack.Add(billConfig);
-                canCraft = true;
-
-                code = EventCode.ButtonPressed;
-            }
-
-            // only returns bills after billconfig is closed
-            if (recipe != null && canCraft && billConfig != null && billConfig.IsOpen == false)
-            {
-                canCraft = false;
-                // returns bill in the refrenced bill
-                refBill = bill;
-                return (EventCode.BillComplete);
-            }
-
-            return (code);
+            return billConfig;
         }
 
         public static Rect LabelColorAndOutLine(Rect rect, string label, Color color, TextAnchor anchor, float margin = 0f)
