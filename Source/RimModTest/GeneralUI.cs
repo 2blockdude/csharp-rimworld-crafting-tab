@@ -25,7 +25,7 @@ namespace BlockdudesTabs
             BillComplete
         }
 
-        public static int ScrollMenu<T>(Rect rectOut, Action<T, Rect> decorateButton, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f, bool doMouseoverSound = false)
+        public static int ScrollMenu<T>(Rect rectOut, Action<Rect, T> decorateButton, List<T> list, ref Vector2 scrollPosition, float buttonHeight = 30f, bool doMouseoverSound = false)
         {
             int selectedItem = -1;
 
@@ -36,7 +36,7 @@ namespace BlockdudesTabs
             for (int i = 0; i < list.Count; i++)
             {
                 Rect rectButt = new Rect(0f, i * buttonHeight, rectView.width, buttonHeight);
-                decorateButton(list[i], rectButt);
+                decorateButton(rectButt, list[i]);
                 if (Widgets.ButtonText(rectButt, "", false, doMouseoverSound))
                     selectedItem = i;
             }
@@ -45,6 +45,30 @@ namespace BlockdudesTabs
 
             // will return item from list if button has been clicked
             return selectedItem;
+        }
+
+        public static bool ScrollMenu<T>(Rect rectOut, Action<Rect, T> decorateButton, List<T> list, ref T selectedItem, ref Vector2 scrollPosition, float buttonHeight = 30f, bool doMouseoverSound = false)
+        {
+            bool buttonPressed = false;
+
+            Rect rectView = new Rect(0f, 0f, rectOut.width - 16f, list.Count * buttonHeight);
+            Widgets.BeginScrollView(rectOut, ref scrollPosition, rectView);
+
+            // expected custom function for drawing buttons
+            for (int i = 0; i < list.Count; i++)
+            {
+                Rect rectButt = new Rect(0f, i * buttonHeight, rectView.width, buttonHeight);
+                decorateButton(rectButt, list[i]);
+                if (Widgets.ButtonText(rectButt, "", false, doMouseoverSound))
+                {
+                    buttonPressed = true;
+                    selectedItem = list[i];
+                }
+            }
+
+            Widgets.EndScrollView();
+
+            return buttonPressed;
         }
 
         public static bool SearchBar(Rect rectView, ref string searchString)
@@ -98,26 +122,28 @@ namespace BlockdudesTabs
         }
 
         // not sure if this is stupid or not but i like it here
-        public static (Bill_Production bill, EventCode eventVal) MakeBillButton(Rect button, RecipeDef recipe, ThingDef worktableType, bool doChecking = true)
+        public static EventCode MakeBillButton(Rect button, RecipeDef recipe, ThingDef worktableType, ref Bill_Production refBill, string buttonLabel = "Make Bill", bool doChecking = true)
         {
-            if (Widgets.ButtonText(button, "Make Bill"))
+            EventCode code = EventCode.NoEvent;
+
+            if (Widgets.ButtonText(button, buttonLabel))
             {
                 if (doChecking)
                 {
                     // check if research for item is done. note: don't need to check if worktable research is finished
                     if (recipe.researchPrerequisite != null && !recipe.researchPrerequisite.IsFinished)
-                        return (null, EventCode.ResearchIncomplete);
+                        return (EventCode.ResearchIncomplete);
 
                     if (!recipe.AvailableNow)
-                        return (null, EventCode.RecipeNotAvailable);
+                        return (EventCode.RecipeNotAvailable);
 
                     // check if we have a worktable selected
                     if (worktableType == null)
-                        return (null, EventCode.NoSelectedWorktableType);
+                        return (EventCode.NoSelectedWorktableType);
 
                     // check if recipe is compatible with selected worktable
                     if (!recipe.AllRecipeUsers.Contains(worktableType))
-                        return (null, EventCode.IncompatibleRecipe);
+                        return (EventCode.IncompatibleRecipe);
 
                     // find, filter, and update worktables on map
                     List<Building> worktablesOnMap = Find.CurrentMap.listerThings.ThingsMatching(ThingRequest.ForGroup(ThingRequestGroup.PotentialBillGiver)).OfType<Building>().ToList();
@@ -125,7 +151,7 @@ namespace BlockdudesTabs
 
                     // check if there are any available compatible worktables
                     if (worktablesOnMap.Count == 0)
-                        return (null, EventCode.NoAvailableWorktables);
+                        return (EventCode.NoAvailableWorktables);
                 }
 
                 // open bill config menu
@@ -137,17 +163,19 @@ namespace BlockdudesTabs
                 Find.WindowStack.Add(billConfig);
                 canCraft = true;
 
-                return (null, EventCode.ButtonPressed);
+                code = EventCode.ButtonPressed;
             }
 
             // only returns bills after billconfig is closed
             if (recipe != null && canCraft && billConfig != null && billConfig.IsOpen == false)
             {
                 canCraft = false;
-                return (bill, EventCode.BillComplete);
+                // returns bill in the refrenced bill
+                refBill = bill;
+                return (EventCode.BillComplete);
             }
 
-            return (null, EventCode.NoEvent);
+            return (code);
         }
 
         public static Rect LabelColorAndOutLine(Rect rect, string label, Color color, TextAnchor anchor, float margin = 0f)
