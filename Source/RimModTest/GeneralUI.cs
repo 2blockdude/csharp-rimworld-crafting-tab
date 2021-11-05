@@ -151,7 +151,7 @@ namespace BlockdudesTabs
             return rect;
         }
 
-        public static bool CheckboxMinimal(Rect rect, string description, Color color, ref bool currentState, float margin = 2f)
+        public static bool CheckboxMinimal(Rect rect, string description, Color color, ref bool currentState, bool initialState = false, float margin = 2f)
         {
             GUI.color = color;
             Widgets.DrawBox(rect);

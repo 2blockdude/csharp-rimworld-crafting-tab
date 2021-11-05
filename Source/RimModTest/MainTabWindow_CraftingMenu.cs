@@ -33,7 +33,7 @@ namespace BlockdudesTabs
         public static List<RecipeDef> recipeList = null;
 
         // note for future: this could be what i was looking for
-        public static List<IGrouping<ThingDef, RecipeDef>> recipeListCompact = null;
+        //public static List<IGrouping<ThingDef, RecipeDef>> recipeListCompact = null;
 
         // changing lists
         public List<ModContentPack> modFilteredList = null;
@@ -52,6 +52,7 @@ namespace BlockdudesTabs
 
         // filter by researched only
         public bool isResearchOnly = false;
+        public bool showRecipeLabel = false;
 
         public MainTabWindow_CraftingMenu()
         {
@@ -78,13 +79,13 @@ namespace BlockdudesTabs
             Text.Font = GameFont.Small;
             GUI.color = Color.white;
 
-            // see if research project is finished and if it is then update the menu list if research only is turned on
-            if (isResearchOnly && Find.ResearchManager.currentProj != null && Find.ResearchManager.GetProgress(Find.ResearchManager.currentProj) == Find.ResearchManager.currentProj.baseCost)
-            {
-                modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly);
-                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly);
-                recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly);
-            }
+            // figure out how to update list when a research project has been completed either ai thing, debug, or naturally
+            //if (isResearchOnly && Find.ResearchManager.currentProj != null && Find.ResearchManager.GetProgress(Find.ResearchManager.currentProj) == Find.ResearchManager.currentProj.baseCost)
+            //{
+            //    modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly);
+            //    categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly);
+            //    recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly);
+            //}
 
             DoSearchBox(new Rect(
                 menuRect.width / 2f,
@@ -106,20 +107,6 @@ namespace BlockdudesTabs
                 menuRect.height / 3f)
                 .ContractedBy(outMargin));
 
-            Rect rectItemsTab = new Rect(
-                menuRect.width / 2f,
-                30f,
-                menuRect.width / 2f,
-                menuRect.height / 3f * 2f - 30f)
-                .ContractedBy(outMargin);
-            DoItemsTab(rectItemsTab);
-
-            DoResearchOnlyCheckBox(new Rect(
-                rectItemsTab.x + inMargin,
-                rectItemsTab.y + inMargin,
-                15f,
-                15f));
-
             DoItemDescription(new Rect(
                 0f,
                 menuRect.height / 3f * 2f,
@@ -127,6 +114,28 @@ namespace BlockdudesTabs
                 menuRect.height / 3f)
                 .ContractedBy(outMargin));
 
+            Rect rectItemTab = new Rect(
+                menuRect.width / 2f,
+                30f,
+                menuRect.width / 2f,
+                menuRect.height / 3f * 2f - 30f)
+                .ContractedBy(outMargin);
+
+            Rect rectResearchCheckBox = new Rect(
+                rectItemTab.x + inMargin,
+                rectItemTab.y + inMargin,
+                15f,
+                15f);
+
+            Rect rectRecipeLabelCheckBox = new Rect(
+                rectResearchCheckBox.x + inMargin + 15f,
+                rectResearchCheckBox.y,
+                15f,
+                15f);
+
+            DoItemsTab(rectItemTab);
+            DoResearchOnlyCheckBox(rectResearchCheckBox);
+            DoRecipeLabelCheckBox(rectRecipeLabelCheckBox);
         }
 
         // start of menu ui functions
@@ -188,6 +197,11 @@ namespace BlockdudesTabs
                 categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly);
                 recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly);
             }
+        }
+
+        public void DoRecipeLabelCheckBox(Rect rect)
+        {
+            GeneralUI.CheckboxMinimal(rect, "Show Recipe Bill Label", Color.gray, ref showRecipeLabel);
         }
 
         public void DoItemDescription(Rect rect)
@@ -363,7 +377,7 @@ namespace BlockdudesTabs
 
             Rect rectLabel = new Rect(button.x + rectPreviewImage.width + 5f, button.y, button.width - rectPreviewImage.width - 5f, button.height);
 
-            string buttonLabel = item.ProducedThingDef.label.CapitalizeFirst();
+            string buttonLabel = showRecipeLabel ? item.label.CapitalizeFirst() : item.ProducedThingDef.label.CapitalizeFirst();
             Text.Anchor = TextAnchor.MiddleLeft;
             Widgets.Label(rectLabel, buttonLabel);
             Text.Anchor = TextAnchor.UpperLeft;
