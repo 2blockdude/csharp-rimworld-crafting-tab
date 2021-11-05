@@ -151,7 +151,7 @@ namespace BlocksMenu
             return rect;
         }
 
-        public static bool CheckboxMinimal(Rect rect, string description, Color color, ref bool currentState, bool initialState = false, float margin = 2f)
+        public static bool CheckboxMinimal(Rect rect, string description, Color color, ref bool currentState, bool highlightWhenTrue = true, float margin = 2f)
         {
             GUI.color = color;
             Widgets.DrawBox(rect);
@@ -160,7 +160,7 @@ namespace BlocksMenu
             if (description != "")
                 TooltipHandler.TipRegion(rect, new TipSignal(description));
 
-            if (currentState)
+            if (currentState == highlightWhenTrue)
                 Widgets.DrawBoxSolid(rect.ContractedBy(margin), color);
 
             if (Widgets.ButtonText(rect, "", false, false))
