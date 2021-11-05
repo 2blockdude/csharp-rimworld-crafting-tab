@@ -6,7 +6,7 @@ using UnityEngine;
 using Verse.Sound;
 using Verse;
 
-namespace BlockdudesTabs
+namespace BlocksMenu
 {
     [StaticConstructorOnStartup]
     public class MainTabWindow_CraftingMenu : MainTabWindow

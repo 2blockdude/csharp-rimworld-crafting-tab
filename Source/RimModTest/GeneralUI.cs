@@ -5,7 +5,7 @@ using UnityEngine;
 using RimWorld;
 using Verse;
 
-namespace BlockdudesTabs
+namespace BlocksMenu
 {
     public static class GeneralUI
     {
