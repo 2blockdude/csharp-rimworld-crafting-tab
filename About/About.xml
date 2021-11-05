@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
-  <name>Blockdudes Crafting Tab</name>
-  <author>Me</author>
+  <name>Blocks Crafting Menu</name>
+  <author>2blockdude, HendraGradeWood</author>
+  <url>https://github.com/2blockdude/csharp-rimworld-crafting-tab</url>
+  <description>Menu for crafting.</description>
+  <packageId>BlocksMenu.CraftingMenu</packageId>
   <supportedVersions>
     <li>1.3</li>
   </supportedVersions>
-  <packageId>BlockdudesTabs.CraftingTab</packageId>
-  <description>Tab For Crafting.</description>
+  <loadAfter>
+    <li>Ludeon.RimWorld</li>
+  </loadAfter>
 </ModMetaData>
