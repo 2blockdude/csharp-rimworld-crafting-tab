@@ -54,22 +54,16 @@ namespace BlocksMenu
         public bool searchByProducedThing = true;
         public bool showProducedThingName = false;
         public bool showProducedThingDescription = false;
+        public bool keepModsStatic = false;
+        public bool keepCategoriesStatic = false;
 
         public MainTabWindow_CraftingMenu()
         {
             base.draggable = false;
             base.resizeable = false;
-            GenerateLists();
-        }
 
-        private void GenerateLists()
-        {
-            // generate lists
             recipeList = DefDatabase<RecipeDef>.AllDefs.Where(def => def != null && def.ProducedThingDef != null && def.AllRecipeUsers != null && def.AllRecipeUsers.Count() > 0).ToList();
-
-            modFilteredList = FilterModContentPacks(recipeList, string.Empty, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-            categoryFilteredList = FilterThingCategoryDefs(recipeList, null, string.Empty, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-            recipeFilteredList = FilterRecipeDefs(recipeList, null, null, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+            updateLists(true, true, true);
         }
 
         public override void DoWindowContents(Rect inRect)
@@ -81,9 +75,6 @@ namespace BlocksMenu
             // figure out how to update list when a research project has been completed either ai thing, debug, or naturally
             //if (isResearchOnly && Find.ResearchManager.currentProj != null && Find.ResearchManager.GetProgress(Find.ResearchManager.currentProj) == Find.ResearchManager.currentProj.baseCost)
             //{
-            //    modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly);
-            //    categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly);
-            //    recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly);
             //}
 
             DoSearchBox(new Rect(
@@ -150,6 +141,12 @@ namespace BlocksMenu
                 15f,
                 15f);
 
+            Rect rectPos6 = new Rect(
+                rectPos5.x + inMargin + 15f,
+                rectPos5.y,
+                15f,
+                15f);
+
             DoItemsTab(rectItemTab);
 
             DoResearchOnlyCheckBox(rectPos1);
@@ -157,7 +154,28 @@ namespace BlocksMenu
             DoSearchProducedThingCheckBox(rectPos3);
             DoShowProducedThingNameCheckBox(rectPos4);
             DoShowProducedThingDescriptionCheckBox(rectPos5);
+            DoKeepModsAndCategoriesStaticCheckBox(rectPos6);
         }
+
+        // start of update functions
+        // -------------------------
+        public void updateLists(bool updateMods, bool updateCategories, bool updateRecipes)
+        {
+            if (keepModsStatic)
+            {
+                if (updateMods) modFilteredList = FilterModContentPacks(recipeList, string.Empty, string.Empty, false, searchByProducedThing, categorizeByProducedThingSource);
+                if (updateCategories) categoryFilteredList = FilterThingCategoryDefs(recipeList, null, string.Empty, string.Empty, false, searchByProducedThing, categorizeByProducedThingSource);
+            }
+            else
+            {
+                if (updateMods) modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+                if (updateCategories) categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+            }
+
+            if (updateRecipes) recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+        }
+        // -----------------------
+        // end of update functions
 
         // start of menu ui functions
         // --------------------------
@@ -165,9 +183,7 @@ namespace BlocksMenu
         {
             if (GeneralUI.SearchBar(rect, ref searchString))
             {
-                modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-                recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+                updateLists(true, true, true);
             }
         }
 
@@ -181,8 +197,7 @@ namespace BlocksMenu
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 selectedModContentPack = item;
                 selectedCategoryDef = null;
-                recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, "", isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+                updateLists(false, true, true);
             }
         }
 
@@ -195,7 +210,7 @@ namespace BlocksMenu
             {
                 SoundStarter.PlayOneShotOnCamera(SoundDefOf.Click);
                 selectedCategoryDef = item;
-                recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+                updateLists(false, false, true);
             }
         }
 
@@ -218,9 +233,7 @@ namespace BlocksMenu
         {
             if (GeneralUI.CheckboxMinimal(rect, !isResearchOnly ? "Show Researched / Available Items" : "Show All Items", Color.gray, ref isResearchOnly))
             {
-                modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-                recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+                updateLists(true, true, true);
             }
         }
 
@@ -228,9 +241,7 @@ namespace BlocksMenu
         {
             if (GeneralUI.CheckboxMinimal(rect, !categorizeByProducedThingSource ? "Categorize by Item" : "Categorize by Bill", Color.gray, ref categorizeByProducedThingSource, false))
             {
-                modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-                recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, "", isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+                updateLists(true, true, true);
             }
         }
 
@@ -238,8 +249,7 @@ namespace BlocksMenu
         {
             if (GeneralUI.CheckboxMinimal(rect, !searchByProducedThing ? "Search by Item Name" : "Search by Bill Name", Color.gray, ref searchByProducedThing, false))
             {
-                recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, "", isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+                updateLists(false, true, true);
             }
         }
 
@@ -251,6 +261,15 @@ namespace BlocksMenu
         public void DoShowProducedThingDescriptionCheckBox(Rect rect)
         {
             GeneralUI.CheckboxMinimal(rect, !showProducedThingDescription ? "Show Item Details" : "Show Bill Details", Color.gray, ref showProducedThingDescription);
+        }
+
+        public void DoKeepModsAndCategoriesStaticCheckBox(Rect rect)
+        {
+            GeneralUI.CheckboxMinimal(rect, !keepModsStatic ? "Keep Mods And Categories Static" : "Do Mods And Categories Filtering", Color.gray, ref keepModsStatic);
+            {
+                keepCategoriesStatic = keepModsStatic;
+                updateLists(true, true, false);
+            }
         }
         // -----------------
         // end of checkboxes
@@ -322,7 +341,7 @@ namespace BlocksMenu
             Text.Font = GameFont.Medium;
             Widgets.Label(rectThingLabel, selectedDef.label.CapitalizeFirst());
             Text.Font = GameFont.Tiny;
-            Widgets.Label(rectModLabel, "Source: " + 
+            Widgets.Label(rectModLabel, "Source: " +
                 (selectedDef == null || selectedDef.modContentPack == null || selectedDef.modContentPack.Name == null ? "None" : selectedDef.modContentPack.Name));
             Text.Font = GameFont.Small;
 
