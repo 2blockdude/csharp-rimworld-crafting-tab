@@ -216,7 +216,7 @@ namespace BlocksMenu
         // names get a little bit uhhh long here cause i am stupid
         public void DoResearchOnlyCheckBox(Rect rect)
         {
-            if (GeneralUI.CheckboxMinimal(rect, !isResearchOnly ? "Show Researched/Available Items" : "Show All Items", Color.gray, ref isResearchOnly))
+            if (GeneralUI.CheckboxMinimal(rect, !isResearchOnly ? "Show Researched / Available Items" : "Show All Items", Color.gray, ref isResearchOnly))
             {
                 modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
                 categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
@@ -371,7 +371,7 @@ namespace BlocksMenu
                 List<Building> selectedWorktablesOnMap = Find.Selector.SelectedObjectsListForReading.OfType<Building>().Where(building => building != null && building.def != null && selectedRecipeDef != null && selectedRecipeDef.AllRecipeUsers != null && recipe.AllRecipeUsers.Any(def => building.def == def)).ToList();
                 if (selectedWorktablesOnMap.Count < 1)
                 {
-                    Messages.Message("No selected and/or compatable worktables to make bill with.", null, MessageTypeDefOf.CautionInput, null);
+                    Messages.Message("No selected and / or compatable worktables to make bill with.", null, MessageTypeDefOf.CautionInput, null);
                     goto Exit;
                 }
 
