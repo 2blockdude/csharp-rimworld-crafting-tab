@@ -50,10 +50,10 @@ namespace BlocksMenu
 
         // options
         public bool isResearchOnly = false;
+        public bool categorizeByProducedThingSource = true;
+        public bool searchByProducedThing = true;
         public bool showProducedThingName = false;
         public bool showProducedThingDescription = false;
-        public bool searchByProducedThing = true;
-        public bool categorizeByProducedThingSource = true;
 
         public MainTabWindow_CraftingMenu()
         {
@@ -469,7 +469,7 @@ namespace BlocksMenu
 
         // start of helper funcions
         // ------------------------
-        public static List<RecipeDef> FilterRecipeDefs(List<RecipeDef> filterFrom, ModContentPack modFilter, ThingCategoryDef categoryFilter, string filterString = "", bool filterAvailable = false, bool searchProducedThingDef = false, bool filterProducedThingSource = false)
+        public static List<RecipeDef> FilterRecipeDefs(List<RecipeDef> filterFrom, ModContentPack modFilter, ThingCategoryDef categoryFilter, string filterString = "", bool filterAvailable = false, bool filterByProducedThingName = false, bool filterByProducedThingSource = false)
         {
             // filter category
             if (categoryFilter != null)
@@ -478,7 +478,7 @@ namespace BlocksMenu
             // filter search
             if (filterString != "")
             {
-                if (!searchProducedThingDef)
+                if (!filterByProducedThingName)
                 {
                     filterFrom = filterFrom.Where(def => def != null && def.label != null && def.label.IndexOf(filterString, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
                 }
@@ -491,7 +491,7 @@ namespace BlocksMenu
             // filter mod
             if (modFilter != null)
             {
-                if (!filterProducedThingSource)
+                if (!filterByProducedThingSource)
                 {
                     filterFrom = filterFrom.Where(def => def != null && def.modContentPack != null && def.modContentPack == modFilter).ToList();
                 }
@@ -508,9 +508,9 @@ namespace BlocksMenu
             return filterFrom;
         }
 
-        public static List<ThingCategoryDef> FilterThingCategoryDefs(List<RecipeDef> filterFrom, ModContentPack modFilter, string thingDefSearch = "", string categoryDefSearch = "", bool filterAvailable = false, bool searchProducedThingDef = false, bool filterProducedThingSource = false)
+        public static List<ThingCategoryDef> FilterThingCategoryDefs(List<RecipeDef> filterFrom, ModContentPack modFilter, string filterSearch = "", string categoryDefSearch = "", bool filterAvailable = false, bool filterByProducedThingName = false, bool filterByProducedThingSource = false)
         {
-            filterFrom = FilterRecipeDefs(filterFrom, modFilter, null, thingDefSearch, filterAvailable, searchProducedThingDef, filterProducedThingSource);
+            filterFrom = FilterRecipeDefs(filterFrom, modFilter, null, filterSearch, filterAvailable, filterByProducedThingName, filterByProducedThingSource);
 
             List<ThingCategoryDef> filteredCategoryList;
             filteredCategoryList = filterFrom.Where(def => def != null && def.ProducedThingDef != null && def.ProducedThingDef.FirstThingCategory != null).Select(def => def.ProducedThingDef.FirstThingCategory).Distinct().ToList();
@@ -521,13 +521,13 @@ namespace BlocksMenu
             return filteredCategoryList;
         }
 
-        public static List<ModContentPack> FilterModContentPacks(List<RecipeDef> filterFrom, string thingDefSearch = "", string modContentPackSearch = "", bool filterAvailable = false, bool searchProducedThingDef = false, bool filterProducedThingSource = false)
+        public static List<ModContentPack> FilterModContentPacks(List<RecipeDef> filterFrom, string filterSearch = "", string modContentPackSearch = "", bool filterAvailable = false, bool filterByProducedThingName = false, bool filterByProducedThingSource = false)
         {
-            filterFrom = FilterRecipeDefs(filterFrom, null, null, thingDefSearch, filterAvailable, searchProducedThingDef, filterProducedThingSource);
+            filterFrom = FilterRecipeDefs(filterFrom, null, null, filterSearch, filterAvailable, filterByProducedThingName, filterByProducedThingSource);
 
             List<ModContentPack> filteredModContentPack;
 
-            if (filterProducedThingSource)
+            if (filterByProducedThingSource)
             {
                 filteredModContentPack = filterFrom.Where(
                     def => def != null &&
