@@ -50,7 +50,8 @@ namespace BlocksMenu
 
         // options
         public bool isResearchOnly = false;
-        public bool showProducedThingLabel = false;
+        public bool showProducedThingName = false;
+        public bool showProducedThingDescription = false;
         public bool searchByProducedThing = true;
         public bool categorizeByProducedThingSource = true;
 
@@ -119,36 +120,43 @@ namespace BlocksMenu
                 menuRect.height / 3f * 2f - 30f)
                 .ContractedBy(outMargin);
 
-            Rect rectResearchOnlyCheckBox = new Rect(
+            Rect rectPos1 = new Rect(
                 rectItemTab.x + inMargin,
                 rectItemTab.y + inMargin,
                 15f,
                 15f);
 
-            Rect rectProducedThingLabelCheckBox = new Rect(
-                rectResearchOnlyCheckBox.x + inMargin + 15f,
-                rectResearchOnlyCheckBox.y,
+            Rect rectPos2 = new Rect(
+                rectPos1.x + inMargin + 15f,
+                rectPos1.y,
                 15f,
                 15f);
 
-            Rect rectProducedThingSearchCheckBox = new Rect(
-                rectProducedThingLabelCheckBox.x + inMargin + 15f,
-                rectProducedThingLabelCheckBox.y,
+            Rect rectPos3 = new Rect(
+                rectPos2.x + inMargin + 15f,
+                rectPos2.y,
                 15f,
                 15f);
 
-            Rect rectCategorizeProducedThingSourceCheckBox = new Rect(
-                rectProducedThingSearchCheckBox.x + inMargin + 15f,
-                rectProducedThingSearchCheckBox.y,
+            Rect rectPos4 = new Rect(
+                rectPos3.x + inMargin + 15f,
+                rectPos3.y,
+                15f,
+                15f);
+
+            Rect rectPos5 = new Rect(
+                rectPos4.x + inMargin + 15f,
+                rectPos4.y,
                 15f,
                 15f);
 
             DoItemsTab(rectItemTab);
 
-            DoResearchOnlyCheckBox(rectResearchOnlyCheckBox);
-            DoShowProducedThingNameCheckBox(rectProducedThingLabelCheckBox);
-            DoSearchProducedThingCheckBox(rectProducedThingSearchCheckBox);
-            DoCategorizeProducedThingSourceCheckBox(rectCategorizeProducedThingSourceCheckBox);
+            DoResearchOnlyCheckBox(rectPos1);
+            DoCategorizeProducedThingSourceCheckBox(rectPos2);
+            DoSearchProducedThingCheckBox(rectPos3);
+            DoShowProducedThingNameCheckBox(rectPos4);
+            DoShowProducedThingDescriptionCheckBox(rectPos5);
         }
 
         // start of menu ui functions
@@ -157,8 +165,9 @@ namespace BlocksMenu
         {
             if (GeneralUI.SearchBar(rect, ref searchString))
             {
+                modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
                 recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, "", isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
             }
         }
 
@@ -207,35 +216,41 @@ namespace BlocksMenu
         // names get a little bit uhhh long here cause i am stupid
         public void DoResearchOnlyCheckBox(Rect rect)
         {
-            if (GeneralUI.CheckboxMinimal(rect, !isResearchOnly ? "Show Available Items" : "Show All Items", Color.gray, ref isResearchOnly))
+            if (GeneralUI.CheckboxMinimal(rect, !isResearchOnly ? "Show Researched/Available Items" : "Show All Items", Color.gray, ref isResearchOnly))
             {
-                modFilteredList = FilterModContentPacks(recipeList, string.Empty, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+                modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
                 categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
                 recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
             }
         }
 
-        public void DoShowProducedThingNameCheckBox(Rect rect)
+        public void DoCategorizeProducedThingSourceCheckBox(Rect rect)
         {
-            GeneralUI.CheckboxMinimal(rect, !showProducedThingLabel ? "Show Item Name" : "Show Bill Name", Color.gray, ref showProducedThingLabel);
+            if (GeneralUI.CheckboxMinimal(rect, !categorizeByProducedThingSource ? "Categorize by Item" : "Categorize by Bill", Color.gray, ref categorizeByProducedThingSource, false))
+            {
+                modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+                recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, "", isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+            }
         }
 
         public void DoSearchProducedThingCheckBox(Rect rect)
         {
-            if (GeneralUI.CheckboxMinimal(rect, !searchByProducedThing ? "Search by Produced Item Name" : "Search by Bill Name", Color.gray, ref searchByProducedThing, false))
+            if (GeneralUI.CheckboxMinimal(rect, !searchByProducedThing ? "Search by Item Name" : "Search by Bill Name", Color.gray, ref searchByProducedThing, false))
             {
                 recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
                 categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, "", isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
             }
         }
 
-        public void DoCategorizeProducedThingSourceCheckBox(Rect rect)
+        public void DoShowProducedThingNameCheckBox(Rect rect)
         {
-            if (GeneralUI.CheckboxMinimal(rect, !categorizeByProducedThingSource ? "Show All Items From Selected Mod" : "Show All Bills From Selected Mod", Color.gray, ref categorizeByProducedThingSource, false))
-            {
-                recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-                categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, "", isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-            }
+            GeneralUI.CheckboxMinimal(rect, !showProducedThingName ? "List Item Names" : "List Bill Names", Color.gray, ref showProducedThingName);
+        }
+
+        public void DoShowProducedThingDescriptionCheckBox(Rect rect)
+        {
+            GeneralUI.CheckboxMinimal(rect, !showProducedThingDescription ? "Show Item Details" : "Show Bill Details", Color.gray, ref showProducedThingDescription);
         }
         // -----------------
         // end of checkboxes
@@ -298,16 +313,24 @@ namespace BlocksMenu
             rectDescription = GeneralUI.LabelColorAndOutLine(rectDescription, "Description", Color.gray, TextAnchor.UpperCenter, inMargin);
             rectInfo = rectInfo.ContractedBy(2f);
 
+            Def selectedDef;
+            if (showProducedThingDescription && selectedRecipeDef.ProducedThingDef != null)
+                selectedDef = selectedRecipeDef.ProducedThingDef;
+            else
+                selectedDef = selectedRecipeDef;
+
             Text.Font = GameFont.Medium;
-            Widgets.Label(rectThingLabel, selectedRecipeDef.label.CapitalizeFirst());
+            Widgets.Label(rectThingLabel, selectedDef.label.CapitalizeFirst());
             Text.Font = GameFont.Tiny;
-            Widgets.Label(rectModLabel, "Bill source: " + (selectedRecipeDef == null || selectedRecipeDef.modContentPack == null || selectedRecipeDef.modContentPack.Name == null ? "None" : selectedRecipeDef.modContentPack.Name));
+            Widgets.Label(rectModLabel, "Source: " + 
+                (selectedDef == null || selectedDef.modContentPack == null || selectedDef.modContentPack.Name == null ? "None" : selectedDef.modContentPack.Name));
             Text.Font = GameFont.Small;
 
-            Widgets.LabelScrollable(rectDescription, selectedRecipeDef.description, ref _scrollPositionDescription);
-            GeneralUI.ScrollMenu(rectRecipe, DecorateRecipeButton, selectedRecipeDef.ingredients, ref _scrollPositionRecipe, buttonHeight: 22f);
+            Widgets.LabelScrollable(rectDescription, selectedDef.description, ref _scrollPositionDescription);
             Decription_WorktableButtons(rectWorktables);
-            Widgets.InfoCardButton(rectInfo, selectedRecipeDef);
+            Widgets.InfoCardButton(rectInfo, selectedDef);
+
+            GeneralUI.ScrollMenu(rectRecipe, DecorateRecipeButton, selectedRecipeDef.ingredients, ref _scrollPositionRecipe, buttonHeight: 22f);
             Description_MakeBillButton(rectCraft, selectedRecipeDef, "Make Bill");
         }
         // ------------------------
@@ -413,7 +436,7 @@ namespace BlocksMenu
 
             Rect rectLabel = new Rect(button.x + rectPreviewImage.width + 5f, button.y, button.width - rectPreviewImage.width - 5f, button.height);
 
-            string buttonLabel = showProducedThingLabel ? item.ProducedThingDef.label.CapitalizeFirst() : item.label.CapitalizeFirst();
+            string buttonLabel = showProducedThingName ? item.ProducedThingDef.label.CapitalizeFirst() : item.label.CapitalizeFirst();
             Text.Anchor = TextAnchor.MiddleLeft;
             Widgets.Label(rectLabel, buttonLabel);
             Text.Anchor = TextAnchor.UpperLeft;
@@ -503,7 +526,23 @@ namespace BlocksMenu
             filterFrom = FilterRecipeDefs(filterFrom, null, null, thingDefSearch, filterAvailable, searchProducedThingDef, filterProducedThingSource);
 
             List<ModContentPack> filteredModContentPack;
-            filteredModContentPack = filterFrom.Where(def => def != null && def.ProducedThingDef != null && def.ProducedThingDef.modContentPack != null).Select(def => def.ProducedThingDef.modContentPack).Distinct().ToList();
+
+            if (filterProducedThingSource)
+            {
+                filteredModContentPack = filterFrom.Where(
+                    def => def != null &&
+                    def.ProducedThingDef != null &&
+                    def.ProducedThingDef.modContentPack != null)
+                    .Select(def => def.ProducedThingDef.modContentPack).Distinct().ToList();
+            }
+            else
+            {
+                filteredModContentPack = filterFrom.Where(
+                    def => def != null &&
+                    def != null &&
+                    def.modContentPack != null)
+                    .Select(def => def.modContentPack).Distinct().ToList();
+            }
 
             if (filteredModContentPack.Count > 1)
                 filteredModContentPack.Insert(0, null);
