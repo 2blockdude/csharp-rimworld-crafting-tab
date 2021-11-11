@@ -27,8 +27,11 @@ namespace BlocksMenu
         internal static Vector2 _scrollPositionDescription = Vector2.zero;
         internal static Vector2 _scrollPositionWorkBenches = Vector2.zero;
 
-        // Lists
-        public static List<RecipeDef> recipeList = null;
+        // Base Lists
+        public static List<RecipeDef> recipeList = DefDatabase<RecipeDef>.AllDefs.Where(def => def != null && def.ProducedThingDef != null && def.AllRecipeUsers != null && def.AllRecipeUsers.Count() > 0).ToList();
+        public static List<ModContentPack> modList = recipeList.Where(def => def.modContentPack != null).Select(def => def.modContentPack).Distinct().ToList();
+        public static List<ModContentPack> producedThingModList = recipeList.Where(def => def.ProducedThingDef.modContentPack != null).Select(def => def.ProducedThingDef.modContentPack).Distinct().ToList();
+        public static List<ThingCategoryDef> categoryList = recipeList.Where(def => def.ProducedThingDef.FirstThingCategory != null).Select(def => def.ProducedThingDef.FirstThingCategory).Distinct().ToList();
 
         // note for future: this could be what i was looking for
         //public static List<IGrouping<ThingDef, RecipeDef>> recipeListCompact = null;
@@ -62,7 +65,11 @@ namespace BlocksMenu
             base.draggable = false;
             base.resizeable = false;
 
-            recipeList = DefDatabase<RecipeDef>.AllDefs.Where(def => def != null && def.ProducedThingDef != null && def.AllRecipeUsers != null && def.AllRecipeUsers.Count() > 0).ToList();
+            // input null if not done already
+            if (categoryList[0] != null && categoryList.Count > 1) categoryList.Insert(0, null);
+            if (modList[0] != null && modList.Count > 1) modList.Insert(0, null);
+            if (producedThingModList[0] != null && producedThingModList.Count > 1) producedThingModList.Insert(0, null);
+
             updateLists(true, true, true);
         }
 
@@ -161,18 +168,24 @@ namespace BlocksMenu
         // -------------------------
         public void updateLists(bool updateMods, bool updateCategories, bool updateRecipes)
         {
+            List<RecipeDef> recipes = null;
+            List<ThingCategoryDef> categories = null;
+            List<ModContentPack> mods = null;
+
+            FilterDefs(out recipes, out categories, out mods, recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+
             if (keepModsStatic)
             {
-                if (updateMods) modFilteredList = FilterModContentPacks(recipeList, string.Empty, string.Empty, false, searchByProducedThing, categorizeByProducedThingSource);
-                if (updateCategories) categoryFilteredList = FilterThingCategoryDefs(recipeList, null, string.Empty, string.Empty, false, searchByProducedThing, categorizeByProducedThingSource);
+                if (updateMods) modFilteredList = categorizeByProducedThingSource ? producedThingModList : modList;
+                if (updateCategories) categoryFilteredList = categoryList;
             }
             else
             {
-                if (updateMods) modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-                if (updateCategories) categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+                if (updateMods) modFilteredList = mods;
+                if (updateCategories) categoryFilteredList = categories;
             }
 
-            if (updateRecipes) recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
+            if (updateRecipes) recipeFilteredList = recipes;
         }
         // -----------------------
         // end of update functions
@@ -402,12 +415,20 @@ namespace BlocksMenu
             if (billConfig != null && billConfig.IsOpen == false)
             {
                 List<Building> selectedWorktablesOnMap = Find.Selector.SelectedObjectsListForReading.OfType<Building>().Where(building => building != null && building.def != null && selectedRecipeDef != null && selectedRecipeDef.AllRecipeUsers != null && recipe.AllRecipeUsers.Any(def => building.def == def)).ToList();
-                // note: i converted it to a building_worktable. won't work for mods like rimfactory where there buildings are a different type so this will throw and error
-                foreach (Building_WorkTable table in selectedWorktablesOnMap)
+                foreach (Building table in selectedWorktablesOnMap)
                 {
-                    table.BillStack.AddBill(bill.Clone());
-                    Messages.Message("Bill added to selected worktable(s).", null, MessageTypeDefOf.PositiveEvent, null);
+                    // attempt to cast. won't work for custom workbenches
+                    try
+                    {
+                        ((Building_WorkTable)table).BillStack.AddBill(bill.Clone());
+                    }
+                    catch (InvalidCastException e)
+                    {
+                        Log.Message(e.Message);
+                        Messages.Message($"{table.Label} : {table.thingIDNumber} is not supported. Sorry.", new LookTargets(table), MessageTypeDefOf.NegativeEvent, null); ;
+                    }
                 }
+                Messages.Message("Bill added to selected worktable(s).", new LookTargets(selectedWorktablesOnMap), MessageTypeDefOf.PositiveEvent, null);
 
                 // reset bill stuff
                 billConfig = null;
@@ -488,7 +509,66 @@ namespace BlocksMenu
 
         // start of helper funcions
         // ------------------------
-        public static List<RecipeDef> FilterRecipeDefs(List<RecipeDef> filterFrom, ModContentPack modFilter, ThingCategoryDef categoryFilter, string filterString = "", bool filterAvailable = false, bool filterByProducedThingName = false, bool filterByProducedThingSource = false)
+
+        public static void FilterDefs(
+            out List<RecipeDef> filteredRecipeDefs, out List<ThingCategoryDef> filteredCategoryDefs, out List<ModContentPack> filteredModPacks,
+            List<RecipeDef> filterFrom, ModContentPack modFilter, ThingCategoryDef categoryFilter,
+            string filterString = "", bool filterAvailable = false, bool filterByProducedThingName = false, bool filterByProducedThingMod = false)
+        {
+            List<RecipeDef> recipes = new List<RecipeDef>(filterFrom.Count);
+            HashSet<ThingCategoryDef> categories = new HashSet<ThingCategoryDef>();
+            HashSet<ModContentPack> mods = new HashSet<ModContentPack>();
+
+            foreach (RecipeDef item in filterFrom)
+            {
+                bool addToRecipes = true;
+                bool addToCategories = true;
+                bool addToMods = true;
+
+                // checking
+                if (item == null || item.label == null || item.AllRecipeUsers == null || item.modContentPack == null || item.ProducedThingDef == null ||
+                    item.ProducedThingDef.label == null || item.ProducedThingDef.modContentPack == null || item.ProducedThingDef.FirstThingCategory == null)
+                    continue;
+
+                // check category
+                if (categoryFilter != null && item.ProducedThingDef.FirstThingCategory != categoryFilter)
+                    addToRecipes = false;
+
+                // check mod
+                if (modFilter != null)
+                {
+                    if (filterByProducedThingMod && item.ProducedThingDef.modContentPack != modFilter)
+                        addToRecipes = addToCategories = false;
+                    if (!filterByProducedThingMod && item.modContentPack != modFilter)
+                        addToRecipes = addToCategories = false;
+                }
+
+                if (filterString != "")
+                {
+                    if (filterByProducedThingName && item.ProducedThingDef.label.IndexOf(filterString, StringComparison.OrdinalIgnoreCase) < 0)
+                        addToRecipes = addToMods = addToCategories = false;
+                    if (!filterByProducedThingName && item.label.IndexOf(filterString, StringComparison.OrdinalIgnoreCase) < 0)
+                        addToRecipes = addToMods = addToCategories = false;
+                }
+
+                // check available
+                if (filterAvailable && !item.AvailableNow)
+                    addToRecipes = false;
+
+                if (addToRecipes) recipes.Add(item);
+                if (addToCategories) categories.Add(item.ProducedThingDef.FirstThingCategory);
+                if (addToMods) mods.Add(filterByProducedThingMod ? item.ProducedThingDef.modContentPack : item.modContentPack);
+            }
+
+            filteredRecipeDefs = recipes;
+            filteredCategoryDefs = categories.ToList();
+            filteredModPacks = mods.ToList();
+
+            if (filteredCategoryDefs.Count > 1) filteredCategoryDefs.Insert(0, null);
+            if (filteredModPacks.Count > 1) filteredModPacks.Insert(0, null);
+        }
+
+        public static List<RecipeDef> FilterRecipeDefs(List<RecipeDef> filterFrom, ModContentPack modFilter, ThingCategoryDef categoryFilter, string filterString = "", bool filterAvailable = false, bool filterByProducedThingName = false, bool filterByProducedThingMod = false)
         {
             // filter category
             if (categoryFilter != null)
@@ -510,7 +590,7 @@ namespace BlocksMenu
             // filter mod
             if (modFilter != null)
             {
-                if (!filterByProducedThingSource)
+                if (!filterByProducedThingMod)
                 {
                     filterFrom = filterFrom.Where(def => def != null && def.modContentPack != null && def.modContentPack == modFilter).ToList();
                 }
@@ -527,9 +607,9 @@ namespace BlocksMenu
             return filterFrom;
         }
 
-        public static List<ThingCategoryDef> FilterThingCategoryDefs(List<RecipeDef> filterFrom, ModContentPack modFilter, string filterSearch = "", string categoryDefSearch = "", bool filterAvailable = false, bool filterByProducedThingName = false, bool filterByProducedThingSource = false)
+        public static List<ThingCategoryDef> FilterThingCategoryDefs(List<RecipeDef> filterFrom, ModContentPack modFilter, string filterSearch = "", string categoryDefSearch = "", bool filterAvailable = false, bool filterByProducedThingName = false, bool filterByProducedThingMod = false)
         {
-            filterFrom = FilterRecipeDefs(filterFrom, modFilter, null, filterSearch, filterAvailable, filterByProducedThingName, filterByProducedThingSource);
+            filterFrom = FilterRecipeDefs(filterFrom, modFilter, null, filterSearch, filterAvailable, filterByProducedThingName, filterByProducedThingMod);
 
             List<ThingCategoryDef> filteredCategoryList;
             filteredCategoryList = filterFrom.Where(def => def != null && def.ProducedThingDef != null && def.ProducedThingDef.FirstThingCategory != null).Select(def => def.ProducedThingDef.FirstThingCategory).Distinct().ToList();
@@ -540,13 +620,13 @@ namespace BlocksMenu
             return filteredCategoryList;
         }
 
-        public static List<ModContentPack> FilterModContentPacks(List<RecipeDef> filterFrom, string filterSearch = "", string modContentPackSearch = "", bool filterAvailable = false, bool filterByProducedThingName = false, bool filterByProducedThingSource = false)
+        public static List<ModContentPack> FilterModContentPacks(List<RecipeDef> filterFrom, string filterSearch = "", string modContentPackSearch = "", bool filterAvailable = false, bool filterByProducedThingName = false, bool filterByProducedThingMod = false)
         {
-            filterFrom = FilterRecipeDefs(filterFrom, null, null, filterSearch, filterAvailable, filterByProducedThingName, filterByProducedThingSource);
+            filterFrom = FilterRecipeDefs(filterFrom, null, null, filterSearch, filterAvailable, filterByProducedThingName, filterByProducedThingMod);
 
             List<ModContentPack> filteredModContentPack;
 
-            if (filterByProducedThingSource)
+            if (filterByProducedThingMod)
             {
                 filteredModContentPack = filterFrom.Where(
                     def => def != null &&
