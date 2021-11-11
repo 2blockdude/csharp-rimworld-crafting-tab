@@ -65,9 +65,10 @@ namespace BlocksMenu
             base.draggable = false;
             base.resizeable = false;
 
-            if (categoryList.Count > 1) categoryList.Insert(0, null);
-            if (modList.Count > 1) modList.Insert(0, null);
-            if (producedThingModList.Count > 1) producedThingModList.Insert(0, null);
+            // input null if not done already
+            if (categoryList[0] != null && categoryList.Count > 1) categoryList.Insert(0, null);
+            if (modList[0] != null && modList.Count > 1) modList.Insert(0, null);
+            if (producedThingModList[0] != null && producedThingModList.Count > 1) producedThingModList.Insert(0, null);
 
             updateLists(true, true, true);
         }
@@ -185,19 +186,6 @@ namespace BlocksMenu
             }
 
             if (updateRecipes) recipeFilteredList = recipes;
-
-            //if (keepModsStatic)
-            //{
-            //    if (updateMods) modFilteredList = FilterModContentPacks(recipeList, string.Empty, string.Empty, false, searchByProducedThing, categorizeByProducedThingSource);
-            //    if (updateCategories) categoryFilteredList = FilterThingCategoryDefs(recipeList, null, string.Empty, string.Empty, false, searchByProducedThing, categorizeByProducedThingSource);
-            //}
-            //else
-            //{
-            //    if (updateMods) modFilteredList = FilterModContentPacks(recipeList, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-            //    if (updateCategories) categoryFilteredList = FilterThingCategoryDefs(recipeList, selectedModContentPack, searchString, string.Empty, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
-            //}
-
-            //if (updateRecipes) recipeFilteredList = FilterRecipeDefs(recipeList, selectedModContentPack, selectedCategoryDef, searchString, isResearchOnly, searchByProducedThing, categorizeByProducedThingSource);
         }
         // -----------------------
         // end of update functions
@@ -427,12 +415,20 @@ namespace BlocksMenu
             if (billConfig != null && billConfig.IsOpen == false)
             {
                 List<Building> selectedWorktablesOnMap = Find.Selector.SelectedObjectsListForReading.OfType<Building>().Where(building => building != null && building.def != null && selectedRecipeDef != null && selectedRecipeDef.AllRecipeUsers != null && recipe.AllRecipeUsers.Any(def => building.def == def)).ToList();
-                // note: i converted it to a building_worktable. won't work for mods like rimfactory where there buildings are a different type so this will throw and error
-                foreach (Building_WorkTable table in selectedWorktablesOnMap)
+                foreach (Building table in selectedWorktablesOnMap)
                 {
-                    table.BillStack.AddBill(bill.Clone());
-                    Messages.Message("Bill added to selected worktable(s).", null, MessageTypeDefOf.PositiveEvent, null);
+                    // attempt to cast. won't work for custom workbenches
+                    try
+                    {
+                        ((Building_WorkTable)table).BillStack.AddBill(bill.Clone());
+                    }
+                    catch (InvalidCastException e)
+                    {
+                        Log.Message(e.Message);
+                        Messages.Message($"{table.Label} : {table.thingIDNumber} is not supported. Sorry.", new LookTargets(table), MessageTypeDefOf.NegativeEvent, null); ;
+                    }
                 }
+                Messages.Message("Bill added to selected worktable(s).", new LookTargets(selectedWorktablesOnMap), MessageTypeDefOf.PositiveEvent, null);
 
                 // reset bill stuff
                 billConfig = null;

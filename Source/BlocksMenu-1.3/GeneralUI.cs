@@ -16,8 +16,10 @@ namespace BlocksMenu
             Rect rectView = new Rect(0f, 0f, rectOut.width - 16f, list.Count * buttonHeight);
             Widgets.BeginScrollView(rectOut, ref scrollPosition, rectView);
 
-            // expected custom function for drawing buttons
-            for (int i = 0; i < list.Count; i++)
+            // only draw button if it is in view otherwise just forget about it
+            int firstButtonInView = (int)(scrollPosition.y / buttonHeight);
+            int lastButtonInView = (int)((scrollPosition.y + rectOut.height) / buttonHeight) + 1; // +1 for margin of error
+            for (int i = firstButtonInView; i < list.Count && i < lastButtonInView; i++)
             {
                 Rect rectButt = new Rect(0f, i * buttonHeight, rectView.width, buttonHeight);
                 decorateButton(rectButt, list[i]);
@@ -31,6 +33,7 @@ namespace BlocksMenu
             return selectedItem;
         }
 
+        // better one than above i think
         public static bool ScrollMenu<T>(Rect rectOut, Action<Rect, T> decorateButton, List<T> list, ref T selectedItem, ref Vector2 scrollPosition, float buttonHeight = 30f, bool doMouseoverSound = false)
         {
             bool buttonPressed = false;
@@ -38,8 +41,11 @@ namespace BlocksMenu
             Rect rectView = new Rect(0f, 0f, rectOut.width - 16f, list.Count * buttonHeight);
             Widgets.BeginScrollView(rectOut, ref scrollPosition, rectView);
 
-            // expected custom function for drawing buttons
-            for (int i = 0; i < list.Count; i++)
+
+            // only draw button if it is in view otherwise just forget about it
+            int firstButtonInView = (int)(scrollPosition.y / buttonHeight);
+            int lastButtonInView = (int)((scrollPosition.y + rectOut.height) / buttonHeight) + 1; // +1 for margin of error
+            for (int i = firstButtonInView; i < list.Count && i < lastButtonInView; i++)
             {
                 Rect rectButt = new Rect(0f, i * buttonHeight, rectView.width, buttonHeight);
                 decorateButton(rectButt, list[i]);
